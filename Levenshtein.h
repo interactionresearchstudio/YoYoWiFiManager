@@ -1,7 +1,7 @@
 #ifndef Levenshtein_h
 #define Levenshtein_h
 
-#define MIN3(a, b, c) ((a) < (b) ? ((a) < (c) ? (a) : (c)) : ((b) < (c) ? (b) : (c)))
+#define LEVENSHTEIN_MIN3(a, b, c) ((a) < (b) ? ((a) < (c) ? (a) : (c)) : ((b) < (c) ? (b) : (c)))
 
 class Levenshtein {
   public:
@@ -16,7 +16,7 @@ class Levenshtein {
         column[0] = x;
         for (y = 1, lastdiag = x - 1; y <= s1len; y++) {
           olddiag = column[y];
-          column[y] = MIN3(column[y] + 1, column[y - 1] + 1, lastdiag + (s1[y - 1] == s2[x - 1] ? 0 : 1));
+          column[y] = LEVENSHTEIN_MIN3(column[y] + 1, column[y - 1] + 1, lastdiag + (s1[y - 1] == s2[x - 1] ? 0 : 1));
           lastdiag = olddiag;
         }
       }
