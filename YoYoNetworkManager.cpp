@@ -195,7 +195,7 @@ void YoYoNetworkManager::createSCADSAP() {
   Serial.println(myIP);
 }
 
-void connectToWifi(String credentials) {
+void YoYoNetworkManager::connectToWifi(String credentials) {
 
   String _wifiCredentials = credentials;
   const size_t capacity = 2 * JSON_ARRAY_SIZE(6) + JSON_OBJECT_SIZE(2) + 150;
@@ -304,4 +304,98 @@ void connectToWifi(String credentials) {
   Serial.println("IP address: ");
   Serial.println(WiFi.localIP());
   disconnected = false;
+}
+
+void YoYoNetworkManager::setupCaptivePortal() {
+  //TODO: empty
+}
+
+void YoYoNetworkManager::setupLocalServer() {
+  //TODO: empty
+}
+
+void YoYoNetworkManager::setupSocketClientEvents() {
+  //TODO: empty
+}
+
+void YoYoNetworkManager::setupSocketIOEvents() {
+  //TODO: empty
+}
+
+bool YoYoNetworkManager::isWifiValid(String incomingSSID) {
+  int n = WiFi.scanNetworks();
+  int currMatch = 255;
+  int prevMatch = currMatch;
+  int matchID;
+  Serial.println("scan done");
+  if (n == 0) {
+    Serial.println("no networks found");
+    Serial.println("can't find any wifi in the area");
+    return false;
+  } else {
+    Serial.print(n);
+    Serial.println(" networks found");
+    for (int i = 0; i < n; ++i) {
+      Serial.println(WiFi.SSID(i));
+      String networkSSID = WiFi.SSID(i);
+      if (networkSSID.length() <= SSID_MAX_LENGTH) {
+        currMatch = Levenshtein::levenshteinIgnoreCase(incomingSSID.c_str(), WiFi.SSID(i).c_str()) < 2;
+        if (Levenshtein::levenshteinIgnoreCase(incomingSSID.c_str(), WiFi.SSID(i).c_str()) < 2) {
+          if (currMatch < prevMatch) {
+            prevMatch = currMatch;
+            matchID = i;
+          }
+        }
+      } else {
+        // SSID too long
+        Serial.println("SSID too long for use with current ESP-IDF");
+      }
+    }
+    if (prevMatch != 255) {
+      Serial.println("Found a match!");
+      return true;
+    } else {
+      Serial.println("can't find any wifi that are close enough matches in the area");
+      return false;
+    }
+  }
+}
+
+String YoYoNetworkManager::checkSsidForSpelling(String incomingSSID) {
+  int n = WiFi.scanNetworks();
+  int currMatch = 255;
+  int prevMatch = currMatch;
+  int matchID;
+  Serial.println("scan done");
+  if (n == 0) {
+    Serial.println("no networks found");
+    Serial.println("can't find any wifi in the area");
+    return incomingSSID;
+  } else {
+    Serial.print(n);
+    Serial.println(" networks found");
+    for (int i = 0; i < n; ++i) {
+      Serial.println(WiFi.SSID(i));
+      String networkSSID = WiFi.SSID(i);
+      if (networkSSID.length() <= SSID_MAX_LENGTH) {
+        currMatch = Levenshtein::levenshteinIgnoreCase(incomingSSID.c_str(), WiFi.SSID(i).c_str()) < 2;
+        if (Levenshtein::levenshteinIgnoreCase(incomingSSID.c_str(), WiFi.SSID(i).c_str()) < 2) {
+          if (currMatch < prevMatch) {
+            prevMatch = currMatch;
+            matchID = i;
+          }
+        }
+      } else {
+        // SSID too long
+        Serial.println("SSID too long for use with current ESP-IDF");
+      }
+    }
+    if (prevMatch != 255) {
+      Serial.println("Found a match!");
+      return WiFi.SSID(matchID);
+    } else {
+      Serial.println("can't find any wifi that are close enough matches in the area");
+      return incomingSSID;
+    }
+  }
 }

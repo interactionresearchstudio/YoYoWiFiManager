@@ -1,6 +1,5 @@
 #ifndef YoYoNetworkManager_h
 #define YoYoNetworkManager_h
-#endif
 
 #include "Arduino.h"
 #include <Preferences.h>
@@ -11,6 +10,11 @@
 #include <DNSServer.h>
 #include <HTTPClient.h>
 #include <HTTPUpdate.h>
+
+#include "Levenshtein.h"
+
+#define SSID_MAX_LENGTH 31
+#define WIFICONNECTTIMEOUT 60000
 
 class YoYoNetworkManager
 {
@@ -56,4 +60,15 @@ class YoYoNetworkManager
     void createSCADSAP();
 
   private:
+    bool disconnected = false;
+
+    void setupCaptivePortal();
+    void setupLocalServer();
+    void setupSocketClientEvents();
+    void connectToWifi(String credentials);
+    void setupSocketIOEvents();
+    bool isWifiValid(String incomingSSID);
+    String checkSsidForSpelling(String incomingSSID);
 };
+
+#endif
