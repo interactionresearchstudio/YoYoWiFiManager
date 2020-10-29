@@ -2,6 +2,7 @@
 #define YoYoNetworkManager_h
 
 #include "Arduino.h"
+
 #include <Preferences.h>
 #include <ArduinoJson.h>
 #include <WiFi.h>
@@ -11,6 +12,7 @@
 #include <HTTPClient.h>
 #include <HTTPUpdate.h>
 
+#include "CaptiveRequestHandler.h"
 #include "Levenshtein.h"
 
 #define SSID_MAX_LENGTH 31
@@ -26,7 +28,7 @@ class YoYoNetworkManager
     String myID = "";
     bool inList;
 
-    uint8_t ledBuiltIn = 2;
+    uint8_t wifiLEDPin;
 
     enum PAIRED_STATUS {
       remoteSetup,
@@ -54,6 +56,10 @@ class YoYoNetworkManager
     WiFiMulti wifiMulti;
 
     bool disconnected = false;
+    
+    bool isResetting = false;
+    unsigned long resetTime;
+    int resetDurationMs = 4000;
 
     void loadCredentials();
     void setPairedStatus();
@@ -72,8 +78,14 @@ class YoYoNetworkManager
     String checkSsidForSpelling(String incomingSSID);
   
   public:
-    void begin();
+    void begin(uint8_t wifiLEDPin = 2);
     void update();
+
+    void printWifiStatus(uint8_t status);
+
+    void factoryReset();
+    void softReset(int delayMs);
+    void checkReset();
 };
 
 #endif
