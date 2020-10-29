@@ -1,4 +1,3 @@
-#include "Arduino.h"
 #include "YoYoNetworkManager.h"
 
 void YoYoNetworkManager::loadCredentials() {
@@ -307,7 +306,7 @@ void YoYoNetworkManager::connectToWifi(String credentials) {
 }
 
 void YoYoNetworkManager::setupCaptivePortal() {
-  //TODO: empty
+  dnsServer.start(DNS_PORT, "*", apIP);
 }
 
 void YoYoNetworkManager::setupLocalServer() {
