@@ -18,7 +18,7 @@
 
 class YoYoNetworkManager
 {
-  public:
+  private:
     Preferences preferences;
 
     String wifiCredentials = "";
@@ -47,10 +47,14 @@ class YoYoNetworkManager
     String scads_ssid = "";
     String scads_pass = "blinkblink";
 
+    const byte DNS_PORT = 53;
+    DNSServer dnsServer;
+    IPAddress apIP = IPAddress(192, 168, 4, 1);
+
     WiFiMulti wifiMulti;
 
-    void begin();
-    void update();
+    bool disconnected = false;
+
     void loadCredentials();
     void setPairedStatus();
     int getNumberOfMacAddresses();
@@ -59,9 +63,6 @@ class YoYoNetworkManager
     boolean scanAndConnectToLocalSCADS();
     void createSCADSAP();
 
-  private:
-    bool disconnected = false;
-
     void setupCaptivePortal();
     void setupLocalServer();
     void setupSocketClientEvents();
@@ -69,6 +70,10 @@ class YoYoNetworkManager
     void setupSocketIOEvents();
     bool isWifiValid(String incomingSSID);
     String checkSsidForSpelling(String incomingSSID);
+  
+  public:
+    void begin();
+    void update();
 };
 
 #endif
