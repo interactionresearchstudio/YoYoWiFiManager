@@ -3,7 +3,13 @@
 YoYoNetworkManager nManager;
 
 void setup() {
-  nManager.begin();
+  Serial.begin(115200);
+
+  nManager.begin(); //blocking
+
+  // if(WiFi.status() == WL_CONNECTED) {
+  //   //connected
+  // }
 }
 
 void loop() {

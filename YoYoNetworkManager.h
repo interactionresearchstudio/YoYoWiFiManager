@@ -1,8 +1,8 @@
 #ifndef YoYoNetworkManager_h
 #define YoYoNetworkManager_h
-#endif
 
 #include "Arduino.h"
+
 #include <Preferences.h>
 #include <ArduinoJson.h>
 #include <WiFi.h>
@@ -12,9 +12,15 @@
 #include <HTTPClient.h>
 #include <HTTPUpdate.h>
 
+#include "CaptiveRequestHandler.h"
+#include "Levenshtein.h"
+
+#define SSID_MAX_LENGTH 31
+#define WIFICONNECTTIMEOUT 60000
+
 class YoYoNetworkManager
 {
-  public:
+  private:
     Preferences preferences;
 
     String wifiCredentials = "";
@@ -22,7 +28,7 @@ class YoYoNetworkManager
     String myID = "";
     bool inList;
 
-    uint8_t ledBuiltIn = 2;
+    uint8_t wifiLEDPin;
 
     enum PAIRED_STATUS {
       remoteSetup,
@@ -43,10 +49,18 @@ class YoYoNetworkManager
     String scads_ssid = "";
     String scads_pass = "blinkblink";
 
+    const byte DNS_PORT = 53;
+    DNSServer dnsServer;
+    IPAddress apIP = IPAddress(192, 168, 4, 1);
+
     WiFiMulti wifiMulti;
 
-    void begin();
-    void update();
+    bool disconnected = false;
+    
+    bool isResetting = false;
+    unsigned long resetTime;
+    int resetDurationMs = 4000;
+
     void loadCredentials();
     void setPairedStatus();
     int getNumberOfMacAddresses();
@@ -55,5 +69,23 @@ class YoYoNetworkManager
     boolean scanAndConnectToLocalSCADS();
     void createSCADSAP();
 
-  private:
+    void setupCaptivePortal();
+    void setupLocalServer();
+    void setupSocketClientEvents();
+    void connectToWifi(String credentials);
+    void setupSocketIOEvents();
+    bool isWifiValid(String incomingSSID);
+    String checkSsidForSpelling(String incomingSSID);
+  
+  public:
+    void begin(uint8_t wifiLEDPin = 2);
+    void update();
+
+    void printWifiStatus(uint8_t status);
+
+    void factoryReset();
+    void softReset(int delayMs);
+    void checkReset();
 };
+
+#endif
