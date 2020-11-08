@@ -9,18 +9,19 @@ void YoYoNetworkManager::loadCredentials() {
 
 void YoYoNetworkManager::begin(uint8_t wifiLEDPin) {
   this -> wifiLEDPin = wifiLEDPin;
+  yoyoWifi.attachLed(wifiLEDPin);
 
   loadCredentials();
   setPairedStatus();
-  myID = generateID();
+  myID = yoyoWifi.generateID();
 
   if (wifiCredentials == "" || getNumberOfMacAddresses() < 2) {
     Serial.println("Scanning for available SCADS");
-    boolean foundLocalSCADS = scanAndConnectToLocalSCADS();
+    boolean foundLocalSCADS = yoyoWifi.scanAndConnectToLocalSCADS();
     if (!foundLocalSCADS) {
       //become server
       currentSetupStatus = setup_server;
-      createSCADSAP();
+      yoyoWifi.createSCADSAP();
       setupCaptivePortal();
       setupLocalServer();
     }
@@ -35,7 +36,7 @@ void YoYoNetworkManager::begin(uint8_t wifiLEDPin) {
     Serial.println(macCredentials);
     //connect to router to talk to server
     digitalWrite(wifiLEDPin, 0);
-    connectToWifi(wifiCredentials);
+    yoyoWifi.connectToWifi(wifiCredentials);
     //checkForUpdate();
     setupSocketIOEvents();
     currentSetupStatus = setup_finished;
@@ -150,15 +151,7 @@ void YoYoNetworkManager::addToMacAddressJSON(String addr) {
   preferences.end();
 }
 
-String YoYoNetworkManager::generateID() {
-  //https://github.com/espressif/arduino-esp32/issues/3859#issuecomment-689171490
-  uint64_t chipID = ESP.getEfuseMac();
-  uint32_t low = chipID % 0xFFFFFFFF;
-  uint32_t high = (chipID >> 32) % 0xFFFFFFFF;
-  String out = String(low);
-  return  out;
-}
-
+/*
 boolean YoYoNetworkManager::scanAndConnectToLocalSCADS() {
   boolean foundLocalSCADS = false;
 
@@ -205,7 +198,8 @@ boolean YoYoNetworkManager::scanAndConnectToLocalSCADS() {
   }
   return (foundLocalSCADS);
 }
-
+*/
+/*
 void YoYoNetworkManager::createSCADSAP() {
   //Creates Access Point for other device to connect to
   scads_ssid = "Yo-Yo-" + generateID();
@@ -221,7 +215,9 @@ void YoYoNetworkManager::createSCADSAP() {
   IPAddress myIP = WiFi.softAPIP();
   Serial.println(myIP);
 }
+*/
 
+/*
 void YoYoNetworkManager::connectToWifi(String credentials) {
   String _wifiCredentials = credentials;
   const size_t capacity = 2 * JSON_ARRAY_SIZE(6) + JSON_OBJECT_SIZE(2) + 150;
@@ -336,7 +332,7 @@ void YoYoNetworkManager::printWifiStatus(uint8_t status) {
       break;
   }
 }
-
+*/
 void YoYoNetworkManager::setupCaptivePortal() {
   dnsServer.start(DNS_PORT, "*", apIP);
 }
@@ -353,6 +349,7 @@ void YoYoNetworkManager::setupSocketIOEvents() {
   //TODO: empty
 }
 
+/*
 bool YoYoNetworkManager::isWifiValid(String incomingSSID) {
   int n = WiFi.scanNetworks();
   int currMatch = 255;
@@ -391,7 +388,9 @@ bool YoYoNetworkManager::isWifiValid(String incomingSSID) {
     }
   }
 }
+*/
 
+/*
 String YoYoNetworkManager::checkSsidForSpelling(String incomingSSID) {
   int n = WiFi.scanNetworks();
   int currMatch = 255;
@@ -430,3 +429,4 @@ String YoYoNetworkManager::checkSsidForSpelling(String incomingSSID) {
     }
   }
 }
+*/

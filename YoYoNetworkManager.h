@@ -13,10 +13,7 @@
 #include <HTTPUpdate.h>
 
 #include "CaptiveRequestHandler.h"
-#include "Levenshtein.h"
-
-#define SSID_MAX_LENGTH 31
-#define WIFICONNECTTIMEOUT 60000
+#include "YoYoWifi.h"
 
 class YoYoNetworkManager
 {
@@ -56,7 +53,7 @@ class YoYoNetworkManager
     WiFiMulti wifiMulti;
 
     bool disconnected = false;
-    
+
     bool isResetting = false;
     unsigned long resetTime;
     int resetDurationMs = 4000;
@@ -66,17 +63,21 @@ class YoYoNetworkManager
     int getNumberOfMacAddresses();
     void addToMacAddressJSON(String addr);
     String generateID();
+
+    /*
     boolean scanAndConnectToLocalSCADS();
     void createSCADSAP();
+    */
 
     void setupCaptivePortal();
     void setupLocalServer();
     void setupSocketClientEvents();
-    void connectToWifi(String credentials);
+    //void connectToWifi(String credentials);
     void setupSocketIOEvents();
-    bool isWifiValid(String incomingSSID);
-    String checkSsidForSpelling(String incomingSSID);
-  
+    //bool isWifiValid(String incomingSSID);
+    //String checkSsidForSpelling(String incomingSSID);
+    YoYoWifi yoyoWifi;
+
   public:
     void begin(uint8_t wifiLEDPin = 2);
     void update();
