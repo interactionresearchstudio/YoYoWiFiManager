@@ -5,9 +5,6 @@
 
 #include <Preferences.h>
 #include <ArduinoJson.h>
-#include <WiFi.h>
-#include <WiFiMulti.h>
-#include <WiFiAP.h>
 #include <DNSServer.h>
 #include <HTTPClient.h>
 #include <HTTPUpdate.h>
@@ -50,7 +47,7 @@ class YoYoNetworkManager
     DNSServer dnsServer;
     IPAddress apIP = IPAddress(192, 168, 4, 1);
 
-    WiFiMulti wifiMulti;
+    YoYoWifi yoyoWifi;
 
     bool disconnected = false;
 
@@ -64,19 +61,10 @@ class YoYoNetworkManager
     void addToMacAddressJSON(String addr);
     String generateID();
 
-    /*
-    boolean scanAndConnectToLocalSCADS();
-    void createSCADSAP();
-    */
-
     void setupCaptivePortal();
     void setupLocalServer();
     void setupSocketClientEvents();
-    //void connectToWifi(String credentials);
     void setupSocketIOEvents();
-    //bool isWifiValid(String incomingSSID);
-    //String checkSsidForSpelling(String incomingSSID);
-    YoYoWifi yoyoWifi;
 
   public:
     void begin(uint8_t wifiLEDPin = 2);
