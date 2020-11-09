@@ -11,6 +11,7 @@
 
 #include "CaptiveRequestHandler.h"
 #include "YoYoWifi.h"
+#include "YoYoWsClient.h"
 
 class YoYoNetworkManager
 {
@@ -29,7 +30,7 @@ class YoYoNetworkManager
       localSetup,
       pairedSetup
     };
-    int currentPairedStatus = remoteSetup;
+    static int currentPairedStatus;
 
     enum SETUP_STATUS {
       setup_pending,
@@ -37,7 +38,7 @@ class YoYoNetworkManager
       setup_server,
       setup_finished
     };
-    int currentSetupStatus = setup_pending;
+    static int currentSetupStatus;
 
     //Access Point credentials
     String scads_ssid = "";
@@ -48,6 +49,7 @@ class YoYoNetworkManager
     IPAddress apIP = IPAddress(192, 168, 4, 1);
 
     YoYoWifi yoyoWifi;
+    static YoYoWsClient wsClient;
 
     bool disconnected = false;
 
@@ -63,8 +65,9 @@ class YoYoNetworkManager
 
     void setupCaptivePortal();
     void setupLocalServer();
-    void setupSocketClientEvents();
     void setupSocketIOEvents();
+    static void webSocketClientEvent(WStype_t type, uint8_t * payload, size_t length);
+    static void decodeWsData(const char* data);
 
   public:
     void begin(uint8_t wifiLEDPin = 2);

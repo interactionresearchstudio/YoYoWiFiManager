@@ -1,5 +1,9 @@
 #include "YoYoNetworkManager.h"
 
+YoYoWsClient YoYoNetworkManager::wsClient;
+int YoYoNetworkManager::currentPairedStatus = remoteSetup;
+int YoYoNetworkManager::currentSetupStatus = setup_pending;
+
 void YoYoNetworkManager::loadCredentials() {
   preferences.begin("scads", false);
   wifiCredentials = preferences.getString("wifi", "");
@@ -28,7 +32,8 @@ void YoYoNetworkManager::begin(uint8_t wifiLEDPin) {
     else {
       //become client
       currentSetupStatus = setup_client;
-      setupSocketClientEvents();
+      wsClient.setWsEventHandler(webSocketClientEvent);
+      wsClient.begin();
     }
   }
   else {
@@ -159,10 +164,74 @@ void YoYoNetworkManager::setupLocalServer() {
   //TODO: empty
 }
 
-void YoYoNetworkManager::setupSocketClientEvents() {
+void YoYoNetworkManager::setupSocketIOEvents() {
   //TODO: empty
 }
 
-void YoYoNetworkManager::setupSocketIOEvents() {
-  //TODO: empty
+void YoYoNetworkManager::webSocketClientEvent(WStype_t type, uint8_t * payload, size_t length) {
+  switch (type) {
+    case WStype_DISCONNECTED:
+      Serial.println("[WSc] Disconnected!\n");
+      //Hot fix for when client doesn't catch RESTART command
+      // TODO softReset(4000);
+      break;
+    case WStype_CONNECTED:
+      Serial.println("Connected!");
+      //wsClient.sendMessage(getJSONMac().c_str());
+      wsClient.sendMessage("hi");
+      break;
+    case WStype_TEXT:
+      Serial.println("Text received");
+      #ifdef DEV
+      Serial.println((char *)payload);
+      #endif
+      String output = (char *)payload;
+      if (output == "RESTART") {
+        // TODO softReset(4000);
+        Serial.println("i'm going to reset");
+      } else {
+        decodeWsData((char *)payload);
+      }
+      break;
+  }
+}
+
+// determines if data received from websocket is mac address or wifi credentials
+void YoYoNetworkManager::decodeWsData(const char* data) {
+  const size_t capacity = 2 * JSON_ARRAY_SIZE(6) + JSON_OBJECT_SIZE(2) + 150;
+  DynamicJsonDocument doc(capacity);
+  deserializeJson(doc, (const char*)data);
+  if (doc.containsKey("mac")) {
+    JsonArray mac = doc["mac"];
+    String MAC = mac[0];
+    Serial.println("I received a MAC address");
+    Serial.println(MAC);
+    if (MAC != "") {
+      //save to preferences
+      // TODO addToMacAddressJSON(MAC);
+      if (currentSetupStatus != setup_client) {
+        // TODO wsClient.sendMessage(getJSONMac());
+      }
+    } else {
+      Serial.println("remote MAC address incorrect");
+    }
+  } else if (doc.containsKey("ssid")) {
+    String remoteSSID = doc["ssid"][0];
+    Serial.println("I received a SSID");
+    if (remoteSSID != NULL) {
+      if (doc.containsKey("password")) {
+        String remotePASS = doc["password"][0];
+        Serial.println("I received a Password");
+        JsonArray wifi = doc["ssid"];
+        for (int i = 0; i < wifi.size(); i++) {
+          // TODO addToWiFiJSON(doc["ssid"][i], doc["password"][i]);
+        }
+      }
+    } else {
+      Serial.println("remote ssid empty");
+    }
+  } else {
+    Serial.println("Incorrect data format");
+    Serial.println(data);
+  }
 }
