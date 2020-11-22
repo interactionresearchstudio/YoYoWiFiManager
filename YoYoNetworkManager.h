@@ -3,20 +3,23 @@
 
 #include "Arduino.h"
 
-#include <Preferences.h>
 #include <ArduinoJson.h>
 #include <DNSServer.h>
 #include <HTTPClient.h>
 #include <HTTPUpdate.h>
 
 #include "CaptiveRequestHandler.h"
+
 #include "YoYoWifi.h"
 #include "YoYoWsClient.h"
+#include "YoYoNetworkManagerPreferences.h"
+
+#include "Levenshtein.h"
 
 class YoYoNetworkManager
 {
   private:
-    Preferences preferences;
+    YoYoNetworkManagerPreferences preferences;
 
     String wifiCredentials = "";
     String macCredentials = "";
