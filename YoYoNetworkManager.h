@@ -3,7 +3,6 @@
 
 #include "Arduino.h"
 
-#include <Preferences.h>
 #include <ArduinoJson.h>
 #include <WiFi.h>
 #include <WiFiMulti.h>
@@ -13,6 +12,7 @@
 #include <HTTPUpdate.h>
 
 #include "CaptiveRequestHandler.h"
+#include "YoYoNetworkManagerPreferences.h"
 #include "Levenshtein.h"
 
 #define SSID_MAX_LENGTH 31
@@ -21,7 +21,7 @@
 class YoYoNetworkManager
 {
   private:
-    Preferences preferences;
+    YoYoNetworkManagerPreferences preferences;
 
     String wifiCredentials = "";
     String macCredentials = "";
