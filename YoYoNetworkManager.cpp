@@ -1,5 +1,9 @@
 #include "YoYoNetworkManager.h"
 
+YoYoWsClient YoYoNetworkManager::wsClient;
+int YoYoNetworkManager::currentPairedStatus = remoteSetup;
+int YoYoNetworkManager::currentSetupStatus = setup_pending;
+
 void YoYoNetworkManager::loadCredentials() {
   preferences.begin("scads", false);
   wifiCredentials = preferences.getString("wifi", "");
@@ -9,25 +13,27 @@ void YoYoNetworkManager::loadCredentials() {
 
 void YoYoNetworkManager::begin(uint8_t wifiLEDPin) {
   this -> wifiLEDPin = wifiLEDPin;
+  yoyoWifi.attachLed(wifiLEDPin);
 
   loadCredentials();
   setPairedStatus();
-  myID = generateID();
+  myID = yoyoWifi.generateID();
 
   if (wifiCredentials == "" || getNumberOfMacAddresses() < 2) {
     Serial.println("Scanning for available SCADS");
-    boolean foundLocalSCADS = scanAndConnectToLocalSCADS();
+    boolean foundLocalSCADS = yoyoWifi.scanAndConnectToLocalSCADS();
     if (!foundLocalSCADS) {
       //become server
       currentSetupStatus = setup_server;
-      createSCADSAP();
+      yoyoWifi.createSCADSAP();
       setupCaptivePortal();
       setupLocalServer();
     }
     else {
       //become client
       currentSetupStatus = setup_client;
-      setupSocketClientEvents();
+      wsClient.setWsEventHandler(webSocketClientEvent);
+      wsClient.begin();
     }
   }
   else {
@@ -35,7 +41,7 @@ void YoYoNetworkManager::begin(uint8_t wifiLEDPin) {
     Serial.println(macCredentials);
     //connect to router to talk to server
     digitalWrite(wifiLEDPin, 0);
-    connectToWifi(wifiCredentials);
+    yoyoWifi.connectToWifi(wifiCredentials);
     //checkForUpdate();
     setupSocketIOEvents();
     currentSetupStatus = setup_finished;
@@ -150,193 +156,6 @@ void YoYoNetworkManager::addToMacAddressJSON(String addr) {
   preferences.end();
 }
 
-String YoYoNetworkManager::generateID() {
-  //https://github.com/espressif/arduino-esp32/issues/3859#issuecomment-689171490
-  uint64_t chipID = ESP.getEfuseMac();
-  uint32_t low = chipID % 0xFFFFFFFF;
-  uint32_t high = (chipID >> 32) % 0xFFFFFFFF;
-  String out = String(low);
-  return  out;
-}
-
-boolean YoYoNetworkManager::scanAndConnectToLocalSCADS() {
-  boolean foundLocalSCADS = false;
-
-  // WiFi.scanNetworks will return the number of networks found
-  Serial.println("scan start");
-  int n = WiFi.scanNetworks();
-  Serial.println("scan done");
-  if (n == 0) {
-    Serial.println("no networks found");
-  } else {
-    Serial.print(n);
-    Serial.println(" networks found");
-    for (int i = 0; i < n; ++i) {
-      // Print SSID and RSSI for each network found
-      Serial.print(i + 1);
-      Serial.print(": ");
-      Serial.print(WiFi.SSID(i));
-      Serial.print(" (");
-      Serial.print(WiFi.RSSI(i));
-      Serial.print(")");
-      Serial.println((WiFi.encryptionType(i) == WIFI_AUTH_OPEN) ? " " : "*");
-      delay(10);
-      String networkSSID = WiFi.SSID(i);
-      if (networkSSID.length() <= SSID_MAX_LENGTH) {
-        scads_ssid = WiFi.SSID(i);
-        if (scads_ssid.indexOf("Yo-Yo-") > -1) {
-          Serial.println("Found YOYO");
-          foundLocalSCADS = true;
-          wifiMulti.addAP(scads_ssid.c_str(), scads_pass.c_str());
-          while ((wifiMulti.run() != WL_CONNECTED)) {
-            delay(500);
-            Serial.print(".");
-          }
-          Serial.println("");
-          Serial.println("WiFi connected");
-          Serial.println("IP address: ");
-          Serial.println(WiFi.localIP());
-        }
-      } else {
-        // SSID too long
-        Serial.println("SSID too long for use with current ESP-IDF");
-      }
-    }
-  }
-  return (foundLocalSCADS);
-}
-
-void YoYoNetworkManager::createSCADSAP() {
-  //Creates Access Point for other device to connect to
-  scads_ssid = "Yo-Yo-" + generateID();
-  Serial.print("Wifi name:");
-  Serial.println(scads_ssid);
-
-  WiFi.mode(WIFI_AP);
-  delay(2000);
-
-  WiFi.persistent(false);
-  WiFi.softAPConfig(IPAddress(192,168,4,1), IPAddress(192,168,4,1), IPAddress(255, 255, 255, 0));
-  WiFi.softAP(scads_ssid.c_str(), scads_pass.c_str());
-  IPAddress myIP = WiFi.softAPIP();
-  Serial.println(myIP);
-}
-
-void YoYoNetworkManager::connectToWifi(String credentials) {
-  String _wifiCredentials = credentials;
-  const size_t capacity = 2 * JSON_ARRAY_SIZE(6) + JSON_OBJECT_SIZE(2) + 150;
-  DynamicJsonDocument doc(capacity);
-  deserializeJson(doc, _wifiCredentials);
-  JsonArray ssid = doc["ssid"];
-  JsonArray pass = doc["password"];
-  if (ssid.size() > 0) {
-    for (int i = 0; i < ssid.size(); i++) {
-      if (isWifiValid(ssid[i])) {
-      wifiMulti.addAP(checkSsidForSpelling(ssid[i]).c_str(), pass[i]);
-      }
-    }
-  } else {
-    Serial.println("issue with wifi credentials, creating access point");
-  }
-
-  Serial.println("Connecting to Router");
-
-  long wifiMillis = millis();
-  bool connectSuccess = false;
-
-  preferences.begin("scads", false);
-  bool hasConnected = preferences.getBool("hasConnected");
-  preferences.end();
-
-  while (!connectSuccess) {
-
-    uint8_t currentStatus = wifiMulti.run();
-
-    //#ifdef DEV
-      printWifiStatus(currentStatus);
-    //#endif
-
-    if (currentStatus == WL_CONNECTED) {
-      // Connected!
-
-      if (!hasConnected) {
-        preferences.begin("scads", false);
-        preferences.putBool("hasConnected", true);
-        preferences.end();
-        hasConnected = true;
-      }
-      connectSuccess = true;
-      break;
-    }
-
-    if (millis() - wifiMillis > WIFICONNECTTIMEOUT) {
-      // Timeout, check if we're out of range.
-      while (hasConnected) {
-        // Out of range, keep trying
-        uint8_t _currentStatus = wifiMulti.run();
-        if (_currentStatus == WL_CONNECTED) {
-          digitalWrite(wifiLEDPin, 0);
-          preferences.begin("scads", false);
-          preferences.putBool("hasConnected", true);
-          preferences.end();
-          break;
-        }
-        else {
-          digitalWrite(wifiLEDPin, 1);
-          delay(100);
-          Serial.print(".");
-        }
-        yield();
-      }
-      if (!hasConnected) {
-        // Wipe credentials and reset
-        Serial.println("Wifi connect failed, Please try your details again in the captive portal");
-        preferences.begin("scads", false);
-        preferences.putString("wifi", "");
-        preferences.end();
-        ESP.restart();
-      }
-    }
-
-    delay(100);
-    yield();
-    Serial.print(".");
-  }
-  Serial.println("");
-  Serial.println("WiFi connected");
-  Serial.println("IP address: ");
-  Serial.println(WiFi.localIP());
-
-  disconnected = false;
-}
-
-void YoYoNetworkManager::printWifiStatus(uint8_t status) {
-  Serial.print("Status: ");
-  switch (status) {
-    case WL_CONNECTED:
-      Serial.println("WL_CONNECTED");
-      break;
-    case WL_IDLE_STATUS:
-      Serial.println("WL_IDLE_STATUS");
-      break;
-    case WL_NO_SSID_AVAIL:
-      Serial.println("WL_NO_SSID_AVAIL");
-      break;
-    case WL_SCAN_COMPLETED:
-      Serial.println("WL_SCAN_COMPLETED");
-      break;
-    case WL_CONNECT_FAILED:
-      Serial.println("WL_CONNECT_FAILED");
-      break;
-    case WL_CONNECTION_LOST:
-      Serial.println("WL_CONNECTION_LOST");
-      break;
-    case WL_DISCONNECTED:
-      Serial.println("WL_DISCONNECTED");
-      break;
-  }
-}
-
 void YoYoNetworkManager::setupCaptivePortal() {
   dnsServer.start(DNS_PORT, "*", apIP);
 }
@@ -345,88 +164,74 @@ void YoYoNetworkManager::setupLocalServer() {
   //TODO: empty
 }
 
-void YoYoNetworkManager::setupSocketClientEvents() {
-  //TODO: empty
-}
-
 void YoYoNetworkManager::setupSocketIOEvents() {
   //TODO: empty
 }
 
-bool YoYoNetworkManager::isWifiValid(String incomingSSID) {
-  int n = WiFi.scanNetworks();
-  int currMatch = 255;
-  int prevMatch = currMatch;
-  int matchID;
-  Serial.println("scan done");
-  if (n == 0) {
-    Serial.println("no networks found");
-    Serial.println("can't find any wifi in the area");
-    return false;
-  } else {
-    Serial.print(n);
-    Serial.println(" networks found");
-    for (int i = 0; i < n; ++i) {
-      Serial.println(WiFi.SSID(i));
-      String networkSSID = WiFi.SSID(i);
-      if (networkSSID.length() <= SSID_MAX_LENGTH) {
-        currMatch = Levenshtein::levenshteinIgnoreCase(incomingSSID.c_str(), WiFi.SSID(i).c_str()) < 2;
-        if (Levenshtein::levenshteinIgnoreCase(incomingSSID.c_str(), WiFi.SSID(i).c_str()) < 2) {
-          if (currMatch < prevMatch) {
-            prevMatch = currMatch;
-            matchID = i;
-          }
-        }
+void YoYoNetworkManager::webSocketClientEvent(WStype_t type, uint8_t * payload, size_t length) {
+  switch (type) {
+    case WStype_DISCONNECTED:
+      Serial.println("[WSc] Disconnected!\n");
+      //Hot fix for when client doesn't catch RESTART command
+      // TODO softReset(4000);
+      break;
+    case WStype_CONNECTED:
+      Serial.println("Connected!");
+      //wsClient.sendMessage(getJSONMac().c_str());
+      wsClient.sendMessage("hi");
+      break;
+    case WStype_TEXT:
+      Serial.println("Text received");
+      #ifdef DEV
+      Serial.println((char *)payload);
+      #endif
+      String output = (char *)payload;
+      if (output == "RESTART") {
+        // TODO softReset(4000);
+        Serial.println("i'm going to reset");
       } else {
-        // SSID too long
-        Serial.println("SSID too long for use with current ESP-IDF");
+        decodeWsData((char *)payload);
       }
-    }
-    if (prevMatch != 255) {
-      Serial.println("Found a match!");
-      return true;
-    } else {
-      Serial.println("can't find any wifi that are close enough matches in the area");
-      return false;
-    }
+      break;
   }
 }
 
-String YoYoNetworkManager::checkSsidForSpelling(String incomingSSID) {
-  int n = WiFi.scanNetworks();
-  int currMatch = 255;
-  int prevMatch = currMatch;
-  int matchID;
-  Serial.println("scan done");
-  if (n == 0) {
-    Serial.println("no networks found");
-    Serial.println("can't find any wifi in the area");
-    return incomingSSID;
-  } else {
-    Serial.print(n);
-    Serial.println(" networks found");
-    for (int i = 0; i < n; ++i) {
-      Serial.println(WiFi.SSID(i));
-      String networkSSID = WiFi.SSID(i);
-      if (networkSSID.length() <= SSID_MAX_LENGTH) {
-        currMatch = Levenshtein::levenshteinIgnoreCase(incomingSSID.c_str(), WiFi.SSID(i).c_str()) < 2;
-        if (Levenshtein::levenshteinIgnoreCase(incomingSSID.c_str(), WiFi.SSID(i).c_str()) < 2) {
-          if (currMatch < prevMatch) {
-            prevMatch = currMatch;
-            matchID = i;
-          }
-        }
-      } else {
-        // SSID too long
-        Serial.println("SSID too long for use with current ESP-IDF");
+// determines if data received from websocket is mac address or wifi credentials
+void YoYoNetworkManager::decodeWsData(const char* data) {
+  const size_t capacity = 2 * JSON_ARRAY_SIZE(6) + JSON_OBJECT_SIZE(2) + 150;
+  DynamicJsonDocument doc(capacity);
+  deserializeJson(doc, (const char*)data);
+  if (doc.containsKey("mac")) {
+    JsonArray mac = doc["mac"];
+    String MAC = mac[0];
+    Serial.println("I received a MAC address");
+    Serial.println(MAC);
+    if (MAC != "") {
+      //save to preferences
+      // TODO addToMacAddressJSON(MAC);
+      if (currentSetupStatus != setup_client) {
+        // TODO wsClient.sendMessage(getJSONMac());
       }
-    }
-    if (prevMatch != 255) {
-      Serial.println("Found a match!");
-      return WiFi.SSID(matchID);
     } else {
-      Serial.println("can't find any wifi that are close enough matches in the area");
-      return incomingSSID;
+      Serial.println("remote MAC address incorrect");
     }
+  } else if (doc.containsKey("ssid")) {
+    String remoteSSID = doc["ssid"][0];
+    Serial.println("I received a SSID");
+    if (remoteSSID != NULL) {
+      if (doc.containsKey("password")) {
+        String remotePASS = doc["password"][0];
+        Serial.println("I received a Password");
+        JsonArray wifi = doc["ssid"];
+        for (int i = 0; i < wifi.size(); i++) {
+          // TODO addToWiFiJSON(doc["ssid"][i], doc["password"][i]);
+        }
+      }
+    } else {
+      Serial.println("remote ssid empty");
+    }
+  } else {
+    Serial.println("Incorrect data format");
+    Serial.println(data);
   }
 }

@@ -4,19 +4,17 @@
 #include "Arduino.h"
 
 #include <ArduinoJson.h>
-#include <WiFi.h>
-#include <WiFiMulti.h>
-#include <WiFiAP.h>
 #include <DNSServer.h>
 #include <HTTPClient.h>
 #include <HTTPUpdate.h>
 
 #include "CaptiveRequestHandler.h"
-#include "YoYoNetworkManagerPreferences.h"
-#include "Levenshtein.h"
 
-#define SSID_MAX_LENGTH 31
-#define WIFICONNECTTIMEOUT 60000
+#include "YoYoWifi.h"
+#include "YoYoWsClient.h"
+#include "YoYoNetworkManagerPreferences.h"
+
+#include "Levenshtein.h"
 
 class YoYoNetworkManager
 {
@@ -35,7 +33,7 @@ class YoYoNetworkManager
       localSetup,
       pairedSetup
     };
-    int currentPairedStatus = remoteSetup;
+    static int currentPairedStatus;
 
     enum SETUP_STATUS {
       setup_pending,
@@ -43,7 +41,7 @@ class YoYoNetworkManager
       setup_server,
       setup_finished
     };
-    int currentSetupStatus = setup_pending;
+    static int currentSetupStatus;
 
     //Access Point credentials
     String scads_ssid = "";
@@ -53,10 +51,11 @@ class YoYoNetworkManager
     DNSServer dnsServer;
     IPAddress apIP = IPAddress(192, 168, 4, 1);
 
-    WiFiMulti wifiMulti;
+    YoYoWifi yoyoWifi;
+    static YoYoWsClient wsClient;
 
     bool disconnected = false;
-    
+
     bool isResetting = false;
     unsigned long resetTime;
     int resetDurationMs = 4000;
@@ -66,17 +65,13 @@ class YoYoNetworkManager
     int getNumberOfMacAddresses();
     void addToMacAddressJSON(String addr);
     String generateID();
-    boolean scanAndConnectToLocalSCADS();
-    void createSCADSAP();
 
     void setupCaptivePortal();
     void setupLocalServer();
-    void setupSocketClientEvents();
-    void connectToWifi(String credentials);
     void setupSocketIOEvents();
-    bool isWifiValid(String incomingSSID);
-    String checkSsidForSpelling(String incomingSSID);
-  
+    static void webSocketClientEvent(WStype_t type, uint8_t * payload, size_t length);
+    static void decodeWsData(const char* data);
+
   public:
     void begin(uint8_t wifiLEDPin = 2);
     void update();
