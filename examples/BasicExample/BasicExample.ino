@@ -1,11 +1,11 @@
-#include "YoYoNetworkManager.h"
+#include "YoYoWiFiManager.h"
 
-YoYoNetworkManager nManager;
+YoYoWiFiManager wifiManager;
 
 void setup() {
   Serial.begin(115200);
 
-  nManager.begin(); //blocking
+  wifiManager.autoConnect("YoYoMachines", "blinkblink"); //blocking
 
   // if(WiFi.status() == WL_CONNECTED) {
   //   //connected
@@ -13,5 +13,4 @@ void setup() {
 }
 
 void loop() {
-  nManager.update();
 }

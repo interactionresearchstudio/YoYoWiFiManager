@@ -1,10 +1,9 @@
-#ifndef YoYoNetworkManagerPreferences_h
-#define YoYoNetworkManagerPreferences_h
+#ifndef YoYoWiFiManagerPreferences_h
+#define YoYoWiFiManagerPreferences_h
 
 #include <Preferences.h>
 
-class YoYoNetworkManagerPreferences
-{
+class YoYoWiFiManagerPreferences {
     private:
         Preferences preferences;
     public:
