@@ -7,161 +7,50 @@ YoYoWiFiManager::YoYoWiFiManager(uint8_t wifiLEDPin) {
   this -> wifiLEDPin = wifiLEDPin;
 }
 
-boolean YoYoWiFiManager::autoConnect(char const *apName, char const *apPassword) {
-  loadCredentials();
-  setPairedStatus();
-  myID = generateID();
-
-  if (wifiCredentials == "" || getNumberOfMacAddresses() < 2) {
-    Serial.println("Scanning for available SCADS");
-    boolean foundLocalSCADS = scanAndConnectToLocalSCADS();
-    if (!foundLocalSCADS) {
-      //become server
-      currentSetupStatus = setup_server;
-      createSCADSAP();
-      setupCaptivePortal();
-    }
-    else {
-      //become client
-      currentSetupStatus = setup_client;
-    }
+boolean YoYoWiFiManager::autoConnect(char const *apName, char const *apPassword, bool forcePortal) {
+  if(joinPeerNetwork(apName, apPassword)) {
+    //become client
+    currentSetupStatus = setup_client;
   }
   else {
-    Serial.print("List of Mac addresses:");
-    Serial.println(macCredentials);
-    //connect to router to talk to server
-    digitalWrite(wifiLEDPin, 0);
-    connectToWifi(wifiCredentials);
-    //checkForUpdate();
-    currentSetupStatus = setup_finished;
-    Serial.println("setup complete");
+    //become server
+    currentSetupStatus = setup_server;
+    createPeerNetwork(apName, apPassword);
   }
 
-  return(false);
-}
-
-void YoYoWiFiManager::loadCredentials() {
-  preferences.begin("scads", false);
-  wifiCredentials = preferences.getString("wifi", "");
-  macCredentials = preferences.getString("mac", "");
-  preferences.end();
-}
-
-void YoYoWiFiManager::setPairedStatus() {
-  int numberOfMacAddresses = getNumberOfMacAddresses();
-  if (numberOfMacAddresses == 0) {
-    Serial.println("setting up JSON database for mac addresses");
-    preferences.clear();
-    addToMacAddressJSON(myID);
-  }
-  else if (numberOfMacAddresses < 2) {
-    //check it has a paired mac address
-    Serial.println("Already have local mac address in preferences, but nothing else");
-  }
-  else {
-    currentPairedStatus = pairedSetup;
-    Serial.println("Already has one or more paired mac address");
-  }
-}
-
-int YoYoWiFiManager::getNumberOfMacAddresses() {
-  int numberOfMacAddresses = 0;
-
-  //Returns the number of mac address in JSON array
-  preferences.begin("scads", false);
-  String macCredentials = preferences.getString("mac", "");
-  preferences.end();
-
-  if (macCredentials != "") {
-    const size_t capacity = JSON_ARRAY_SIZE(6) + JSON_OBJECT_SIZE(1) + 10;
-    DynamicJsonDocument addresses(capacity);
-    deserializeJson(addresses, macCredentials);
-    numberOfMacAddresses = addresses["mac"].size();
+  while ((wifiMulti.run() != WL_CONNECTED)) {
+    delay(500);
+    Serial.print(".");
   }
 
-  return (numberOfMacAddresses);
-}
-
-void YoYoWiFiManager::addToMacAddressJSON(String addr) {
-  // appends mac address to memory json array if isn't already in it, creates the json array if it doesnt exist
-  preferences.begin("scads", false);
-  String macAddressList = preferences.getString("mac", "");
-  if (macAddressList != "") {
-    const size_t capacity = JSON_ARRAY_SIZE(6) + JSON_OBJECT_SIZE(1) + 10;
-    DynamicJsonDocument addresses(capacity);
-    deserializeJson(addresses, macAddressList);
-    JsonArray mac = addresses["mac"];
-    inList = false;
-    for ( int i = 0; i < mac.size(); i++) {
-      if (mac[i] == addr) {
-        inList = true;
-        Serial.println("mac address already in list");
-        break;
-      }
-    }
-    if (inList == false) {
-      mac.add(addr);
-      Serial.print("adding ");
-      Serial.print(addr);
-      Serial.println(" to the address list");
-      macAddressList = "";
-      serializeJson(addresses, macAddressList);
-      Serial.println(macAddressList);
-      preferences.putString("mac", macAddressList);
-    }
-  } else {
-    const size_t capacity = JSON_ARRAY_SIZE(6) + JSON_OBJECT_SIZE(1) + 10;
-    DynamicJsonDocument addresses(capacity);
-    JsonArray macArray = addresses.createNestedArray("mac");
-    macArray.add(addr);
-    macAddressList = "";
-    serializeJson(addresses, macAddressList);
-    preferences.putString("mac", macAddressList);
-    Serial.print("creating json object and adding the local mac ");
-    Serial.print(addr);
-    Serial.println(" to the address list");
-  }
-  preferences.end();
-}
-
-void YoYoWiFiManager::setupCaptivePortal() {
-  dnsServer.start(DNS_PORT, "*", apIP);
+  return(true);
 }
 
 bool YoYoWiFiManager::isConnected() {
   return !disconnected;
 }
 
-// Generates a unique ID based on the ESP32's mac
-String YoYoWiFiManager::generateID() {
-  //https://github.com/espressif/arduino-esp32/issues/3859#issuecomment-689171490
-  uint64_t chipID = ESP.getEfuseMac();
-  uint32_t low = chipID % 0xFFFFFFFF;
-  uint32_t high = (chipID >> 32) % 0xFFFFFFFF;
-  String out = String(low);
-  return  out;
-}
-
 // Creates Access Point for other device to connect to
-void YoYoWiFiManager::createSCADSAP() {
-  scads_ssid = "Yo-Yo-" + generateID();
+void YoYoWiFiManager::createPeerNetwork(char const *apName, char const *apPassword) {
   Serial.print("Wifi name:");
-  Serial.println(scads_ssid);
+  Serial.println(apName);
 
   WiFi.mode(WIFI_AP);
   delay(2000);
 
   WiFi.persistent(false);
   WiFi.softAPConfig(apIP, apIP, IPAddress(255, 255, 255, 0));
-  WiFi.softAP(scads_ssid.c_str(), scads_pass.c_str());
+  WiFi.softAP(apName, apPassword);
   IPAddress myIP = WiFi.softAPIP();
   Serial.println(myIP);
+
+  //Start captive portal
+  dnsServer.start(DNS_PORT, "*", apIP);
 }
 
-// Scan and connect to local scads wifi. Returns true if a local scads has been
-// found.
-boolean YoYoWiFiManager::scanAndConnectToLocalSCADS() {
-  boolean foundLocalSCADS = false;
+// Scan and connect to peer wifi network. Returns true if joined.
+boolean YoYoWiFiManager::joinPeerNetwork(char const *apName, char const *apPassword) {
+  boolean joinedPeerNetwork = false;
 
   // WiFi.scanNetworks will return the number of networks found
   Serial.println("scan start");
@@ -169,9 +58,12 @@ boolean YoYoWiFiManager::scanAndConnectToLocalSCADS() {
   Serial.println("scan done");
   if (n == 0) {
     Serial.println("no networks found");
-  } else {
+  }
+  else {
     Serial.print(n);
     Serial.println(" networks found");
+
+    String thisSSID;
     for (int i = 0; i < n; ++i) {
       // Print SSID and RSSI for each network found
       Serial.print(i + 1);
@@ -184,15 +76,15 @@ boolean YoYoWiFiManager::scanAndConnectToLocalSCADS() {
       delay(10);
       String networkSSID = WiFi.SSID(i);
       if (networkSSID.length() <= SSID_MAX_LENGTH) {
-        scads_ssid = WiFi.SSID(i);
-        if (scads_ssid.indexOf("Yo-Yo-") > -1) {
-          Serial.println("Found YOYO");
-          foundLocalSCADS = true;
-          wifiMulti.addAP(scads_ssid.c_str(), scads_pass.c_str());
+        thisSSID = WiFi.SSID(i);
+        if (thisSSID.startsWith(apName)) {
+          Serial.println("Found peer network");
+          wifiMulti.addAP(apName, apPassword);
           while ((wifiMulti.run() != WL_CONNECTED)) {
             delay(500);
             Serial.print(".");
           }
+          joinedPeerNetwork = true;
           Serial.println("");
           Serial.println("WiFi connected");
           Serial.println("IP address: ");
@@ -204,7 +96,7 @@ boolean YoYoWiFiManager::scanAndConnectToLocalSCADS() {
       }
     }
   }
-  return (foundLocalSCADS);
+  return (joinedPeerNetwork);
 }
 
 void YoYoWiFiManager::connectToWifi(String credentials) {
@@ -381,6 +273,10 @@ bool YoYoWiFiManager::isWifiValid(String incomingSSID) {
       return false;
     }
   }
+
+}
+
+void YoYoWiFiManager::listConnectedClients() {
 
 }
 

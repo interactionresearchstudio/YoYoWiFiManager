@@ -7,11 +7,10 @@
 #include <DNSServer.h>
 #include <HTTPClient.h>
 #include <HTTPUpdate.h>
+#include <WiFiMulti.h>
 
 #include "CaptiveRequestHandler.h"
-
-#include "YoYoWifi.h"
-#include "YoYoWiFiManagerPreferences.h"
+#include "YoYoWiFiManagerCredentials.h"
 
 #include "Levenshtein.h"
 
@@ -21,7 +20,7 @@
 class YoYoWiFiManager
 {
   private:
-    YoYoWiFiManagerPreferences preferences;
+    YoYoWiFiManagerCredentials preferences;
 
     String wifiCredentials = "";
     String macCredentials = "";
@@ -45,23 +44,16 @@ class YoYoWiFiManager
     };
     static int currentSetupStatus;
 
-    //Access Point credentials
-    String scads_ssid = "";
-    String scads_pass = "blinkblink";
-
     const byte DNS_PORT = 53;
     DNSServer dnsServer;
     IPAddress apIP = IPAddress(192, 168, 4, 1);
 
-    YoYoWifi yoyoWifi;
+    void listConnectedClients();
 
     bool disconnected = false;
 
-    void loadCredentials();
-    void setPairedStatus();
     int getNumberOfMacAddresses();
     void addToMacAddressJSON(String addr);
-    String generateID();
 
     void setupCaptivePortal();
 
@@ -78,12 +70,12 @@ class YoYoWiFiManager
   public:
     YoYoWiFiManager(uint8_t wifiLEDPin = 2);
 
-    boolean autoConnect(char const *apName, char const *apPassword = NULL);
+    boolean autoConnect(char const *apName, char const *apPassword = NULL, bool forcePortal = false);
 
     void wifiCheck();
     void connectToWifi(String credentials);
-    bool scanAndConnectToLocalSCADS();
-    void createSCADSAP();
+    bool joinPeerNetwork(char const *apName, char const *apPassword);
+    void createPeerNetwork(char const *apName, char const *apPassword);
     bool isConnected();
 };
 

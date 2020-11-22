@@ -1,12 +1,28 @@
-#ifndef YoYoWiFiManagerPreferences_h
-#define YoYoWiFiManagerPreferences_h
+#ifndef YoYoWiFiManagerCredentials_h
+#define YoYoWiFiManagerCredentials_h
 
 #include <Preferences.h>
 
-class YoYoWiFiManagerPreferences {
+class YoYoWiFiManagerCredentials {
     private:
         Preferences preferences;
     public:
+        bool hasWifiCredentials() {
+            
+        }
+
+        String getWifiSSID() {
+
+        }
+
+        String getWifiPassword() {
+            
+        }
+
+        bool wifiCredentialsAreValidated() {
+
+        }
+
         bool begin(const char * name, bool readOnly=false) {
             return(begin(name, readOnly));
         }

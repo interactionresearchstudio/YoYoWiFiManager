@@ -24,13 +24,23 @@ class CaptiveRequestHandler : public AsyncWebHandler {
 
       //if (!isResetting) {     //TODO: I don't think we need this anymore?
         if (request->method() == HTTP_GET) {
-          if (request->url() == "/credentials") getCredentials(request);
-          else if (request->url() == "/scan")   getScan(request);
-          else if (SPIFFS.exists(request->url())) sendFile(request, request->url());
-          else if (request->url().endsWith(".html") || request->url().endsWith("/") || request->url().endsWith("generate_204") || request->url().endsWith("redirect"))  {
+          if (request->url() == "/credentials") {
+            getCredentials(request);
+          }
+          else if (request->url() == "/scan") {
+            getScan(request);
+          }
+          else if (SPIFFS.exists(request->url())) {
+            sendFile(request, request->url());
+          }
+          else if (request->url().endsWith(".html") || 
+                    request->url().endsWith("/") ||
+                    request->url().endsWith("generate_204") ||
+                    request->url().endsWith("redirect"))  {
             sendFile(request, "/index.html");
           }
-          else if (request->url().endsWith("connecttest.txt") || request->url().endsWith("ncsi.txt")) {
+          else if (request->url().endsWith("connecttest.txt") || 
+                    request->url().endsWith("ncsi.txt")) {
             request->send(200, "text/plain", "Microsoft NCSI");
           } else if (strstr(request->url().c_str(), "generate_204_") != NULL) {
             Serial.println("you must be huawei!");
