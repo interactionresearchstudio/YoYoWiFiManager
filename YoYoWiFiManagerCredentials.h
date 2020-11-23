@@ -19,15 +19,17 @@ class YoYoWiFiManagerCredentials {
             loadCredentials();
         }
 
-        void getString(const char* key, char* value, const size_t maxLen) {
+        size_t getString(const char* key, char* value, const size_t maxLen) {
+            size_t len = 0;
+            
             credentials.begin(YoYoWiFiManagerCredentialsNameSpace);
-            credentials.getString(key, value, maxLen);
+            len = credentials.getString(key, value, maxLen);
             credentials.end();
+
+            return(len);
         }
 
         void putString(const char* key, String value) {
-            Serial.printf("+%s\n",value.c_str());
-
             credentials.begin(YoYoWiFiManagerCredentialsNameSpace);
             credentials.putString(key, value);
             credentials.end();
@@ -35,19 +37,20 @@ class YoYoWiFiManagerCredentials {
 
         void loadCredentials() {
             char s[256];
-            getString("credentials", s, 256);
-            //Serial.printf("*%s\n",s);
-            const char d[2] = ":";
+            if(getString("credentials", s, 256) > 0) {
+                const char d[2] = ":";
 
-            char *credentials;
-            credentials = strtok(s, d);
-            
-            int n = 0;
-            while(credentials != NULL) {
-                credentialsAsList[n] = new String(credentials);
+                char *credentials;
+                credentials = strtok(s, d);
                 
-                credentials = strtok(NULL, d);
-                ++n;
+                Serial.printf("credentials %s\n", credentials);
+                int n = 0;
+                while(credentials != NULL) {
+                    credentialsAsList[n] = new String(credentials);
+                    
+                    credentials = strtok(NULL, d);
+                    ++n;
+                }
             }
         }
 

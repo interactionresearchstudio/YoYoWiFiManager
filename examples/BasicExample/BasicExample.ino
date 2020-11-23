@@ -36,6 +36,9 @@ void setup() {
 }
 
 void loop() {
+  if(wifiManager != NULL) {
+     wifiManager -> update();
+  }
 }
 
 // Generates a unique ID based on the ESP32's mac

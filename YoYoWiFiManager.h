@@ -9,7 +9,10 @@
 #include <HTTPUpdate.h>
 #include <WiFiMulti.h>
 
-#include "CaptiveRequestHandler.h"
+#include <AsyncTCP.h>
+#include <ESPAsyncWebServer.h>
+#include "SPIFFS.h"
+
 #include "YoYoWiFiManagerCredentials.h"
 
 #include "Levenshtein.h"
@@ -17,9 +20,10 @@
 #define SSID_MAX_LENGTH 31
 #define WIFICONNECTTIMEOUT 60000
 
-class YoYoWiFiManager
-{
+class YoYoWiFiManager : public AsyncWebHandler {
   private:
+    AsyncWebServer webserver = AsyncWebServer(80);
+
     YoYoWiFiManagerCredentials credentials;
 
     String wifiCredentials = "";
@@ -56,6 +60,7 @@ class YoYoWiFiManager
     void addToMacAddressJSON(String addr);
 
     void setupCaptivePortal();
+    void startWebServer();
 
     //-----------------------------
     uint32_t wificheckMillis;
@@ -77,6 +82,18 @@ class YoYoWiFiManager
     bool joinPeerNetwork(char const *apName, char const *apPassword);
     void createPeerNetwork(char const *apName, char const *apPassword);
     bool isConnected();
+
+    void update();
+
+    //AsyncWebHandler:
+    bool canHandle(AsyncWebServerRequest *request);
+    void handleRequest(AsyncWebServerRequest *request);
+    void handleBody(AsyncWebServerRequest * request, uint8_t *data, size_t len, size_t index, size_t total);
+    void sendFile(AsyncWebServerRequest * request, String path);
+    String getContentType(String filename);
+    void getCredentials(AsyncWebServerRequest *request);
+    bool setCredentials(JsonVariant json);
+    void getScan(AsyncWebServerRequest * request);
 };
 
 #endif
