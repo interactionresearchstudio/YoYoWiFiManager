@@ -20,7 +20,7 @@
 class YoYoWiFiManager
 {
   private:
-    YoYoWiFiManagerCredentials preferences;
+    YoYoWiFiManagerCredentials credentials;
 
     String wifiCredentials = "";
     String macCredentials = "";
@@ -70,7 +70,7 @@ class YoYoWiFiManager
   public:
     YoYoWiFiManager(uint8_t wifiLEDPin = 2);
 
-    boolean autoConnect(char const *apName, char const *apPassword = NULL, bool forcePortal = false);
+    boolean autoConnect(char const *apName, char const *apPassword = NULL, bool force = false);
 
     void wifiCheck();
     void connectToWifi(String credentials);

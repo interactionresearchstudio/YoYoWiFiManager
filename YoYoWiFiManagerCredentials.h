@@ -3,52 +3,139 @@
 
 #include <Preferences.h>
 
+#define YoYoWiFiManagerCredentialsNameSpace "YoYoCred"
+#define YoYoWiFiManagerCredentialsListMax 8
+
 class YoYoWiFiManagerCredentials {
     private:
-        Preferences preferences;
+        Preferences credentials;
+        String *credentialsAsList[YoYoWiFiManagerCredentialsListMax];
+
+        void init() {
+            for(int n=0; n < YoYoWiFiManagerCredentialsListMax; ++n) {
+                credentialsAsList[n] = NULL;
+            }
+
+            loadCredentials();
+        }
+
+        void getString(const char* key, char* value, const size_t maxLen) {
+            credentials.begin(YoYoWiFiManagerCredentialsNameSpace);
+            credentials.getString(key, value, maxLen);
+            credentials.end();
+        }
+
+        void putString(const char* key, String value) {
+            Serial.printf("+%s\n",value.c_str());
+
+            credentials.begin(YoYoWiFiManagerCredentialsNameSpace);
+            credentials.putString(key, value);
+            credentials.end();
+        }
+
+        void loadCredentials() {
+            char s[256];
+            getString("credentials", s, 256);
+            //Serial.printf("*%s\n",s);
+            const char d[2] = ":";
+
+            char *credentials;
+            credentials = strtok(s, d);
+            
+            int n = 0;
+            while(credentials != NULL) {
+                credentialsAsList[n] = new String(credentials);
+                
+                credentials = strtok(NULL, d);
+                ++n;
+            }
+        }
+
+        void saveCredentials() {
+            String s;
+            for(int n=0; n < YoYoWiFiManagerCredentialsListMax; ++n) {
+                if(credentialsAsList[n] != NULL) {
+                    s+=*credentialsAsList[n];
+                    s+=":";
+                }
+            }
+            Serial.printf("saveCredentials: %s\n", s.c_str());
+            putString("credentials", s);
+        }
     public:
-        bool hasWifiCredentials() {
+        YoYoWiFiManagerCredentials() {
+            Serial.println("YoYoWiFiManagerCredentials");
+            init();
+        }
+
+        bool available() {
+            return(getQuantity() > 0);
+        }
+
+        void add(String ssid, String password) {
+            int oldestN = YoYoWiFiManagerCredentialsListMax-1;
+            if(credentialsAsList[oldestN] != NULL) delete credentialsAsList[oldestN];
+
+            for(int n = oldestN; n > 0; --n) {
+                credentialsAsList[n] = credentialsAsList[n-1];
+            }
+            credentialsAsList[0] = new String(ssid + "," + password);   //TODO: double check seprator chars can be relied on;
+
+            saveCredentials();
+        }
+
+        String *get(int n) {
+            String *result = NULL;
             
+            if(n >= 0 && n < YoYoWiFiManagerCredentialsListMax) {
+                result = credentialsAsList[n];
+            }
+
+            return(result);
         }
 
-        String getWifiSSID() {
+        String *getSSID(int n) {
+            String *result = NULL;
 
+            if(n >= 0 && n < YoYoWiFiManagerCredentialsListMax) {
+                String *s = credentialsAsList[n];
+                result = new String(s -> substring(0, s -> indexOf(',')));  //TODO: memory leak
+            }
+
+            return(result);
         }
 
-        String getWifiPassword() {
-            
+        String *getPassword(int n) {
+            String *result = NULL;
+
+            if(n >= 0 && n < YoYoWiFiManagerCredentialsListMax) {
+                String *s = credentialsAsList[n];
+                result = new String(s -> substring(s -> indexOf(',')+1));  //TODO: memory leak
+            }
+
+            return(result);
         }
 
-        bool wifiCredentialsAreValidated() {
+        int getQuantity() {
+            int result = YoYoWiFiManagerCredentialsListMax;
 
-        }
+            for(int n=0; n < YoYoWiFiManagerCredentialsListMax && result == YoYoWiFiManagerCredentialsListMax; ++n) {
+                if(credentialsAsList[n] == NULL) {
+                    result = n;
+                }
+            }
 
-        bool begin(const char * name, bool readOnly=false) {
-            return(begin(name, readOnly));
-        }
-
-        void end() {
-            preferences.end();
-        }
-
-        String getString(const char* key, String defaultValue = String()) {
-            return(preferences.getString(key, defaultValue));
-        }
-
-        size_t putString(const char* key, String value) {
-            return(preferences.putString(key, value));
-        }
-        
-        bool getBool(const char* key, bool defaultValue = false) {
-            return(preferences.putBool(key, defaultValue));
-        }
-
-        size_t putBool(const char* key, bool value) {
-            return(preferences.putBool(key, value));
+            return(result);
         }
 
         bool clear() {
-            return(preferences.clear());
+            bool result = false;
+
+            credentials.begin(YoYoWiFiManagerCredentialsNameSpace);
+            result = credentials.clear();
+            credentials.end();
+
+            return(result);
         }
 };
 

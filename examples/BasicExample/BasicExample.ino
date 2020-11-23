@@ -1,12 +1,15 @@
 #include "YoYoWiFiManager.h"
 #include "Settings.h"
 
-YoYoWiFiManager wifiManager;
+YoYoWiFiManager *wifiManager;
 Settings settings;
 
 void setup() {
   Serial.begin(115200);
+  Serial.println("HELLO");
 
+  wifiManager = new YoYoWiFiManager();
+  wifiManager -> autoConnect("YoYoMachines", "blinkblink");
   /*
   //loadCredentials();
   //setPairedStatus();

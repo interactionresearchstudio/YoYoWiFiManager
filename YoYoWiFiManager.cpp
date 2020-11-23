@@ -4,22 +4,34 @@ int YoYoWiFiManager::currentPairedStatus = remoteSetup;
 int YoYoWiFiManager::currentSetupStatus = setup_pending;
 
 YoYoWiFiManager::YoYoWiFiManager(uint8_t wifiLEDPin) {
+  Serial.println("YoYoWiFiManager");
   this -> wifiLEDPin = wifiLEDPin;
+  //credentials.clear();
 }
 
-boolean YoYoWiFiManager::autoConnect(char const *apName, char const *apPassword, bool forcePortal) {
-  if(joinPeerNetwork(apName, apPassword)) {
-    //become client
-    currentSetupStatus = setup_client;
+boolean YoYoWiFiManager::autoConnect(char const *apName, char const *apPassword, bool force) {
+  if(!credentials.available() || force) {
+    if(joinPeerNetwork(apName, apPassword)) {
+      //become client
+      currentSetupStatus = setup_client;
+    }
+    else {
+      //become server
+      currentSetupStatus = setup_server;
+      createPeerNetwork(apName, apPassword);
+    }
   }
   else {
-    //become server
-    currentSetupStatus = setup_server;
-    createPeerNetwork(apName, apPassword);
+    int N = credentials.getQuantity();
+    for(int n = 0; n < N; ++n) {
+      wifiMulti.addAP(credentials.getSSID(n) -> c_str(), credentials.getPassword(n) -> c_str());
+      //TODO: handle timeout
+    }
   }
 
   while ((wifiMulti.run() != WL_CONNECTED)) {
     delay(500);
+    yield();
     Serial.print(".");
   }
 
@@ -100,7 +112,7 @@ boolean YoYoWiFiManager::joinPeerNetwork(char const *apName, char const *apPassw
 }
 
 void YoYoWiFiManager::connectToWifi(String credentials) {
-
+  /*
   String _wifiCredentials = credentials;
   const size_t capacity = 2 * JSON_ARRAY_SIZE(6) + JSON_OBJECT_SIZE(2) + 150;
   DynamicJsonDocument doc(capacity);
@@ -185,6 +197,7 @@ void YoYoWiFiManager::connectToWifi(String credentials) {
   Serial.println("IP address: ");
   Serial.println(WiFi.localIP());
   disconnected = false;
+  */
 }
 
 String YoYoWiFiManager::checkSsidForSpelling(String incomingSSID) {
