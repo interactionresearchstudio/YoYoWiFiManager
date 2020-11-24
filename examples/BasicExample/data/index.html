@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no, maximum-scale=1">
+    <meta name="description" content="">
+    <meta name="author" content="">
+
+    <link href="bootstrap-4.4.1.min.css" rel="stylesheet" type="text/css">
+    <link href="style.css" rel="stylesheet" type="text/css">
+
+    <script src="jquery-3.5.1.min.js"></script>
+    <script src="bootstrap-4.4.1.min.js"></script>
+    <script src="script.js"></script>
+
+    <meta charset="utf-8">
+  </head>
+  <body onload=init() class="text-center">
+    <div class="container">
+      <div class="alert" id="alert-text"></div>
+      <form class="yo-yo-form">
+        <img src="logo_yoyo.png" alt="" width="200" height="96">
+        <div id="config">
+          <div class="lead" id="macForm">
+            <p>Your Yo-Yo Code:<br/><span id="local-scad-code">XXXX-XXXXX</span></p>
+            <p id="remote-scad-text">Remote Yo-Yo Code:<br/><span id="remote-scad-code"></span></p>
+          </div>
+
+          <div class="mb-4" id="remoteMacForm">
+            <input id="remote-scad-code-input" class="form-control" inputmode="numeric" pattern="[0-9 ]+" type="text" placeholder="Remote Yo-Yo Code">
+          </div>
+
+          <div class="mb-4" id="localWifiForm">
+            <div class="form-group mb-3">
+              <select class="form-control" id="networks-list-select">
+                <option value="" disabled selected>Network Name</option>
+              </select>
+            </div>
+            <input id="local_pass" class="form-control" placeholder="Password" type="password">
+          </div>
+
+          <div class="mb-4" id="remoteWifiForm">
+            <p>Optionally set the remote network:</p>
+            <input id="remote_ssid" class="form-control" placeholder="Network Name">
+            <input id="remote_pass" class="form-control" placeholder="Password" type="password">
+          </div>
+
+          <button class="btn btn-lg btn-primary btn-block" id="save-button" type="submit">Save</button>
+        </div>
+
+        <div class="mb-4" id="nextstep">
+          <p>Your ESP32S will shortly reboot.</p>
+          <p>The blue LED will blink 3 times if the network has been configured correctly.</p>
+          <p>If not, please reconnect to the network Yo-Yo-<span id="local-scad-code">XXXX-XXXXX</span> network and try again.</p>
+        </div>
+        <p class="mt-5 mb-3 text-muted">Interaction Research Studio 2020</p>
+      </form>
+    </div>
+  </body>
+</html>
