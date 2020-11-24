@@ -8,7 +8,7 @@ void setup() {
   Serial.begin(115200);
   Serial.println("HELLO");
 
-  wifiManager = new YoYoWiFiManager();
+  wifiManager = new YoYoWiFiManager(onReadSettings, onWriteSettings);
   wifiManager -> autoConnect("YoYoMachines", "blinkblink");
   /*
   //loadCredentials();
@@ -39,6 +39,56 @@ void loop() {
   if(wifiManager != NULL) {
      wifiManager -> update();
   }
+}
+
+bool onReadSettings(char *json) {
+  Serial.println("onReadSettings");
+
+  /*
+  Serial.println("getSettings");
+
+  String local_ssid = json["local_ssid"].as<String>();
+  String local_pass = json["local_pass"].as<String>();
+  String remote_ssid = json["remote_ssid"].as<String>();
+  String remote_pass = json["remote_pass"].as<String>();
+  String remote_mac = json["remote_mac"].as<String>();
+
+  if (remote_mac != "") {
+    //TODO:
+    //addToMacAddressJSON(remote_mac);
+    success = true;
+  }
+
+  if (remote_pass != "" && remote_ssid != "" && local_ssid != "" && local_pass != "") {
+    //TODO:
+    //addToWiFiJSON(local_ssid, local_pass);
+    //addToWiFiJSON(remote_ssid, remote_pass);
+    //sendWifiCredentials();
+    success = true;
+  }
+  else if (local_pass != "" && local_ssid != "" && remote_ssid == "" && remote_pass == "") {
+    //TODO:
+    //addToWiFiJSON(local_ssid, local_pass);
+    //sendWifiCredentials();
+    success = true;
+  }
+  */
+}
+
+bool onWriteSettings(char *json) {
+  Serial.println("onWriteSettings");
+
+  //TODO:
+  /*
+  settingsJsonDoc["local_mac"] = myID;
+  settingsJsonDoc["local_ssid"] = "";
+  settingsJsonDoc["local_pass_len"] = 0; //local_pass.length;
+  settingsJsonDoc["remote_ssid"] = "";
+  settingsJsonDoc["remote_pass_len"] = 0; //remote_pass.length;
+  settingsJsonDoc["remote_mac"] = getRemoteMacAddress(1);
+  settingsJsonDoc["local_paired_status"] = getCurrentPairedStatusAsString();
+  Serial.println(getCurrentPairedStatusAsString());
+  */
 }
 
 // Generates a unique ID based on the ESP32's mac

@@ -21,15 +21,6 @@
       <form class="yo-yo-form">
         <img src="logo_yoyo.png" alt="" width="200" height="96">
         <div id="config">
-          <div class="lead" id="macForm">
-            <p>Your Yo-Yo Code:<br/><span id="local-scad-code">XXXX-XXXXX</span></p>
-            <p id="remote-scad-text">Remote Yo-Yo Code:<br/><span id="remote-scad-code"></span></p>
-          </div>
-
-          <div class="mb-4" id="remoteMacForm">
-            <input id="remote-scad-code-input" class="form-control" inputmode="numeric" pattern="[0-9 ]+" type="text" placeholder="Remote Yo-Yo Code">
-          </div>
-
           <div class="mb-4" id="localWifiForm">
             <div class="form-group mb-3">
               <select class="form-control" id="networks-list-select">
@@ -39,19 +30,12 @@
             <input id="local_pass" class="form-control" placeholder="Password" type="password">
           </div>
 
-          <div class="mb-4" id="remoteWifiForm">
-            <p>Optionally set the remote network:</p>
-            <input id="remote_ssid" class="form-control" placeholder="Network Name">
-            <input id="remote_pass" class="form-control" placeholder="Password" type="password">
-          </div>
-
           <button class="btn btn-lg btn-primary btn-block" id="save-button" type="submit">Save</button>
         </div>
 
         <div class="mb-4" id="nextstep">
-          <p>Your ESP32S will shortly reboot.</p>
-          <p>The blue LED will blink 3 times if the network has been configured correctly.</p>
-          <p>If not, please reconnect to the network Yo-Yo-<span id="local-scad-code">XXXX-XXXXX</span> network and try again.</p>
+          <p>The blue LED will shortly blink 3 times if the network has been configured correctly.</p>
+          <p>If not, please reconnect to the network network and try again.</p>
         </div>
         <p class="mt-5 mb-3 text-muted">Interaction Research Studio 2020</p>
       </form>
