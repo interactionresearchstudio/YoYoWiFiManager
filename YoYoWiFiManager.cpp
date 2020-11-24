@@ -3,7 +3,10 @@
 int YoYoWiFiManager::currentPairedStatus = remoteSetup;
 int YoYoWiFiManager::currentSetupStatus = setup_pending;
 
-YoYoWiFiManager::YoYoWiFiManager(uint8_t wifiLEDPin) {
+YoYoWiFiManager::YoYoWiFiManager(callbackPtr onReadSettings, callbackPtr onWriteSettings, uint8_t wifiLEDPin) {
+  this -> onReadSettings = onReadSettings;
+  this -> onWriteSettings = onWriteSettings;
+
   Serial.println("YoYoWiFiManager");
   this -> wifiLEDPin = wifiLEDPin;
 
@@ -372,21 +375,16 @@ void YoYoWiFiManager::getSettings(AsyncWebServerRequest *request) {
   AsyncResponseStream *response = request->beginResponseStream("application/json");
 
   StaticJsonDocument<1024> settingsJsonDoc;
-  //TODO:
-  /*
-  settingsJsonDoc["local_mac"] = myID;
-  settingsJsonDoc["local_ssid"] = "";
-  settingsJsonDoc["local_pass_len"] = 0; //local_pass.length;
-  settingsJsonDoc["remote_ssid"] = "";
-  settingsJsonDoc["remote_pass_len"] = 0; //remote_pass.length;
-  settingsJsonDoc["remote_mac"] = getRemoteMacAddress(1);
-  settingsJsonDoc["local_paired_status"] = getCurrentPairedStatusAsString();
-  Serial.println(getCurrentPairedStatusAsString());
-  */
+  settingsJsonDoc["YoYoWiFiManager"] = "";
 
   String jsonString;
   serializeJson(settingsJsonDoc, jsonString);
   response->print(jsonString);
+
+  if(onWriteSettings) {
+    char json[0];
+    onWriteSettings(json);
+  }
 
   request->send(response);
 }
@@ -394,36 +392,9 @@ void YoYoWiFiManager::getSettings(AsyncWebServerRequest *request) {
 bool YoYoWiFiManager::setSettings(JsonVariant json) {
   bool success = false;
 
-  Serial.println("getSettings");
-
-  String local_ssid = json["local_ssid"].as<String>();
-  String local_pass = json["local_pass"].as<String>();
-  String remote_ssid = json["remote_ssid"].as<String>();
-  String remote_pass = json["remote_pass"].as<String>();
-  String remote_mac = json["remote_mac"].as<String>();
-
-  if (remote_mac != "") {
-    //TODO:
-    //addToMacAddressJSON(remote_mac);
-    success = true;
-  }
-
-  if (remote_pass != "" && remote_ssid != "" && local_ssid != "" && local_pass != "") {
-    //TODO:
-    /*
-    addToWiFiJSON(local_ssid, local_pass);
-    addToWiFiJSON(remote_ssid, remote_pass);
-    sendWifiCredentials();
-    */
-    success = true;
-  }
-  else if (local_pass != "" && local_ssid != "" && remote_ssid == "" && remote_pass == "") {
-    //TODO:
-    /*
-    addToWiFiJSON(local_ssid, local_pass);
-    sendWifiCredentials();
-    */
-    success = true;
+  if(onReadSettings) {
+    char json[0];
+    success = onReadSettings(json);
   }
 
   return (success);

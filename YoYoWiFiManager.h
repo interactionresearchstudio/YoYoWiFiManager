@@ -41,6 +41,10 @@ class YoYoWiFiManager : public AsyncWebHandler {
 
     uint8_t wifiLEDPin;
 
+    typedef bool (*callbackPtr)(char *);
+    callbackPtr onReadSettings = NULL;
+    callbackPtr onWriteSettings = NULL;
+
     enum PAIRED_STATUS {
       remoteSetup,
       localSetup,
@@ -78,7 +82,7 @@ class YoYoWiFiManager : public AsyncWebHandler {
     void getPeersAsJson(JsonDocument& jsonDoc);
 
   public:
-    YoYoWiFiManager(uint8_t wifiLEDPin = 2);
+    YoYoWiFiManager(callbackPtr onReadSettings = NULL, callbackPtr onWriteSettings = NULL, uint8_t wifiLEDPin = 2);
 
     boolean autoConnect(char const *apName, char const *apPassword = NULL, bool force = false);
 
