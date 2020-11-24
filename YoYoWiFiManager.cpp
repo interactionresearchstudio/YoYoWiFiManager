@@ -227,10 +227,6 @@ bool YoYoWiFiManager::isSSIDValid(char const *ssid) {
   return(result);
 }
 
-void YoYoWiFiManager::listConnectedClients() {
-
-}
-
 void YoYoWiFiManager::printWifiStatus(uint8_t status) {
   Serial.print("Status: ");
   switch (status) {
@@ -277,12 +273,9 @@ void YoYoWiFiManager::handleRequest(AsyncWebServerRequest *request) {
 
   //if (!isResetting) {     //TODO: I don't think we need this anymore?
     if (request->method() == HTTP_GET) {
-      if (request->url() == "/credentials") {
-        getCredentials(request);
-      }
-      else if (request->url() == "/scan") {
-        getScan(request);
-      }
+      if (request->url() == "/settings")    getSettings(request);
+      else if (request->url() == "/scan")   getScan(request);
+      else if (request->url() == "/peers")  getPeers(request);
       else if (SPIFFS.exists(request->url())) {
         sendFile(request, request->url());
       }
@@ -313,13 +306,13 @@ void YoYoWiFiManager::handleBody(AsyncWebServerRequest * request, uint8_t *data,
 
   //if (!isResetting) {     //TODO: I don't think we need this anymore?
     if (request->method() == HTTP_POST) {
-      if (request->url() == "/credentials") {
+      if (request->url() == "/settings") {
         String json = "";
         for (int i = 0; i < len; i++)  json += char(data[i]);
 
         StaticJsonDocument<1024> credentialsJsonDoc;
         if (!deserializeJson(credentialsJsonDoc, json)) {
-          if(setCredentials(credentialsJsonDoc.as<JsonObject>())) request->send(200);
+          if(setSettings(credentialsJsonDoc.as<JsonObject>())) request->send(200);
 
           else request->send(400);
         }
@@ -374,8 +367,8 @@ String YoYoWiFiManager::getContentType(String filename) {
   return "text/plain";
 }
 
-void YoYoWiFiManager::getCredentials(AsyncWebServerRequest *request) {
-  Serial.println("getCredentials");
+void YoYoWiFiManager::getSettings(AsyncWebServerRequest *request) {
+  Serial.println("getSettings");
   AsyncResponseStream *response = request->beginResponseStream("application/json");
 
   StaticJsonDocument<1024> settingsJsonDoc;
@@ -398,10 +391,10 @@ void YoYoWiFiManager::getCredentials(AsyncWebServerRequest *request) {
   request->send(response);
 }
 
-bool YoYoWiFiManager::setCredentials(JsonVariant json) {
-  bool result = false;
+bool YoYoWiFiManager::setSettings(JsonVariant json) {
+  bool success = false;
 
-  Serial.println("setCredentials");
+  Serial.println("getSettings");
 
   String local_ssid = json["local_ssid"].as<String>();
   String local_pass = json["local_pass"].as<String>();
@@ -412,7 +405,7 @@ bool YoYoWiFiManager::setCredentials(JsonVariant json) {
   if (remote_mac != "") {
     //TODO:
     //addToMacAddressJSON(remote_mac);
-    result = true;
+    success = true;
   }
 
   if (remote_pass != "" && remote_ssid != "" && local_ssid != "" && local_pass != "") {
@@ -422,7 +415,7 @@ bool YoYoWiFiManager::setCredentials(JsonVariant json) {
     addToWiFiJSON(remote_ssid, remote_pass);
     sendWifiCredentials();
     */
-    result = true;
+    success = true;
   }
   else if (local_pass != "" && local_ssid != "" && remote_ssid == "" && remote_pass == "") {
     //TODO:
@@ -430,10 +423,72 @@ bool YoYoWiFiManager::setCredentials(JsonVariant json) {
     addToWiFiJSON(local_ssid, local_pass);
     sendWifiCredentials();
     */
-    result = true;
+    success = true;
   }
 
-  return (result);
+  return (success);
+}
+
+void YoYoWiFiManager::getPeers(AsyncWebServerRequest * request) {
+  AsyncResponseStream *response = request->beginResponseStream("application/json");
+
+  response->print(getPeersAsJsonString());
+  request->send(response);
+}
+
+String YoYoWiFiManager::getPeersAsJsonString() {
+  String jsonString;
+
+  StaticJsonDocument<1000> jsonDoc;
+  getPeersAsJson(jsonDoc);
+  serializeJson(jsonDoc[0], jsonString);
+
+  return (jsonString);
+}
+
+void YoYoWiFiManager::getPeersAsJson(JsonDocument& jsonDoc) {
+  /*
+  JsonArray peers = jsonDoc.createNestedArray();
+
+  wifi_sta_list_t stationList;
+  esp_wifi_ap_get_sta_list(&stationList);  
+
+  for (int i = 0; i < stationList.num; ++i) {
+    wifi_sta_info_t station = stationList.sta[i];
+
+    JsonObject peer  = peers.createNestedObject();
+    //network["mac"] = WiFi.SSID(i);
+    //network["ip"] = WiFi.BSSIDstr(i);
+  }
+  */
+
+  wifi_sta_list_t wifi_sta_list;
+  tcpip_adapter_sta_list_t adapter_sta_list;
+ 
+  memset(&wifi_sta_list, 0, sizeof(wifi_sta_list));
+  memset(&adapter_sta_list, 0, sizeof(adapter_sta_list));
+ 
+  esp_wifi_ap_get_sta_list(&wifi_sta_list);
+  tcpip_adapter_get_sta_list(&wifi_sta_list, &adapter_sta_list);
+ 
+  for (int i = 0; i < adapter_sta_list.num; i++) {
+ 
+    tcpip_adapter_sta_info_t station = adapter_sta_list.sta[i];
+ 
+    Serial.print("station nr ");
+    Serial.println(i);
+ 
+    Serial.print("MAC: ");
+ 
+    for(int i = 0; i< 6; i++){
+      
+      Serial.printf("%02X", station.mac[i]);  
+      if(i<5)Serial.print(":");
+    }
+ 
+    Serial.print("\nIP: ");  
+    Serial.println(ip4addr_ntoa(&(station.ip)));    
+  }
 }
 
 void YoYoWiFiManager::getScan(AsyncWebServerRequest * request) {

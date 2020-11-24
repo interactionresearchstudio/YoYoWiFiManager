@@ -9,6 +9,8 @@
 #include <HTTPUpdate.h>
 #include <WiFiMulti.h>
 
+#include "esp_wifi.h"
+
 #include <AsyncTCP.h>
 #include <ESPAsyncWebServer.h>
 #include "SPIFFS.h"
@@ -23,6 +25,11 @@
 
 class YoYoWiFiManager : public AsyncWebHandler {
   private:
+    WiFiMulti wifiMulti;
+
+    const byte DNS_PORT = 53;
+    DNSServer dnsServer;
+    IPAddress apIP = IPAddress(192, 168, 4, 1);
     AsyncWebServer webserver = AsyncWebServer(80);
 
     YoYoWiFiManagerCredentials credentials;
@@ -49,31 +56,26 @@ class YoYoWiFiManager : public AsyncWebHandler {
     };
     static int currentSetupStatus;
 
-    const byte DNS_PORT = 53;
-    DNSServer dnsServer;
-    IPAddress apIP = IPAddress(192, 168, 4, 1);
-
-    void listConnectedClients();
-
     bool disconnected = false;
 
     int getNumberOfMacAddresses();
     void addToMacAddressJSON(String addr);
 
-    void setupCaptivePortal();
     void startWebServer();
 
     //-----------------------------
     uint32_t wificheckMillis;
     uint32_t wifiCheckTime = 5000;
 
-    WiFiMulti wifiMulti;
 
     bool isSSIDValid(char const *ssid);
     void printWifiStatus(uint8_t status);
 
     String getScanAsJsonString();
     void getScanAsJson(JsonDocument& jsonDoc);
+
+    String getPeersAsJsonString();
+    void getPeersAsJson(JsonDocument& jsonDoc);
 
   public:
     YoYoWiFiManager(uint8_t wifiLEDPin = 2);
@@ -96,9 +98,10 @@ class YoYoWiFiManager : public AsyncWebHandler {
     void handleBody(AsyncWebServerRequest * request, uint8_t *data, size_t len, size_t index, size_t total);
     void sendFile(AsyncWebServerRequest * request, String path);
     String getContentType(String filename);
-    void getCredentials(AsyncWebServerRequest *request);
-    bool setCredentials(JsonVariant json);
+    void getSettings(AsyncWebServerRequest *request);
+    bool setSettings(JsonVariant json);
     void getScan(AsyncWebServerRequest * request);
+    void getPeers(AsyncWebServerRequest * request);
 };
 
 #endif
