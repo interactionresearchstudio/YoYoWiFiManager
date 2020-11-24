@@ -19,6 +19,7 @@
 
 #define SSID_MAX_LENGTH 31
 #define WIFICONNECTTIMEOUT 60000
+#define MAX_NETWORKS_TO_SCAN 5
 
 class YoYoWiFiManager : public AsyncWebHandler {
   private:
@@ -68,9 +69,11 @@ class YoYoWiFiManager : public AsyncWebHandler {
 
     WiFiMulti wifiMulti;
 
-    String checkSsidForSpelling(String incomingSSID);
-    bool isWifiValid(String incomingSSID);
+    bool isSSIDValid(char const *ssid);
     void printWifiStatus(uint8_t status);
+
+    String getScanAsJsonString();
+    void getScanAsJson(JsonDocument& jsonDoc);
 
   public:
     YoYoWiFiManager(uint8_t wifiLEDPin = 2);
@@ -82,6 +85,8 @@ class YoYoWiFiManager : public AsyncWebHandler {
     bool joinPeerNetwork(char const *apName, char const *apPassword);
     void createPeerNetwork(char const *apName, char const *apPassword);
     bool isConnected();
+
+    bool findNetwork(char const *ssid, char *matchingSSID, bool autocomplete = false, bool autocorrect = false, int autocorrectError = 0);
 
     void update();
 

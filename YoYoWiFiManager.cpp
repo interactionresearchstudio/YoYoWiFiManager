@@ -69,58 +69,30 @@ void YoYoWiFiManager::createPeerNetwork(char const *apName, char const *apPasswo
 boolean YoYoWiFiManager::joinPeerNetwork(char const *apName, char const *apPassword) {
   boolean joinedPeerNetwork = false;
 
-  // WiFi.scanNetworks will return the number of networks found
-  Serial.println("scan start");
-  int n = WiFi.scanNetworks();
-  Serial.println("scan done");
-  if (n == 0) {
-    Serial.println("no networks found");
-  }
-  else {
-    Serial.print(n);
-    Serial.println(" networks found");
+  char foundNetwork[SSID_MAX_LENGTH * 2];
+  if(findNetwork(apName, foundNetwork, true)) {
+    Serial.printf("Found peer network: %s\n", foundNetwork);
 
-    String thisSSID;
-    for (int i = 0; i < n; ++i) {
-      // Print SSID and RSSI for each network found
-      Serial.print(i + 1);
-      Serial.print(": ");
-      Serial.print(WiFi.SSID(i));
-      Serial.print(" (");
-      Serial.print(WiFi.RSSI(i));
-      Serial.print(")");
-      Serial.println((WiFi.encryptionType(i) == WIFI_AUTH_OPEN) ? " " : "*");
-      delay(10);
-      String networkSSID = WiFi.SSID(i);
-      if (networkSSID.length() <= SSID_MAX_LENGTH) {
-        thisSSID = WiFi.SSID(i);
-        if (thisSSID.startsWith(apName)) {
-          Serial.println("Found peer network");
-          wifiMulti.addAP(apName, apPassword);
-          while ((wifiMulti.run() != WL_CONNECTED)) {
-            delay(500);
-            Serial.print(".");
-          }
-          joinedPeerNetwork = true;
-          Serial.println("");
-          Serial.println("WiFi connected");
-          Serial.println("IP address: ");
-          Serial.println(WiFi.localIP());
-
-          startWebServer();
-        }
-      } else {
-        // SSID too long
-        Serial.println("SSID too long for use with current ESP-IDF");
-      }
+    wifiMulti.addAP(foundNetwork, apPassword);
+    while ((wifiMulti.run() != WL_CONNECTED)) {
+      delay(500);
+      Serial.print(".");
     }
+    Serial.println("");
+    Serial.println("WiFi connected");
+    Serial.println("IP address: ");
+    Serial.println(WiFi.localIP());
+
+    startWebServer();
+    joinedPeerNetwork = true;
   }
+
   return (joinedPeerNetwork);
 }
 
 void YoYoWiFiManager::startWebServer() {
   Serial.println("startWebServer\n");
-  //webserver.addHandler(new CaptiveRequestHandler()).setFilter(ON_AP_FILTER);  //only when requested from AP
+
   webserver.addHandler(this).setFilter(ON_AP_FILTER);  //only when requested from AP
   webserver.begin();
 }
@@ -135,7 +107,7 @@ void YoYoWiFiManager::connectToWifi(String credentials) {
   JsonArray pass = doc["password"];
   if (ssid.size() > 0) {
     for (int i = 0; i < ssid.size(); i++) {
-      if (isWifiValid(ssid[i])) {
+      if (isSSIDValid(ssid[i])) {
       wifiMulti.addAP(checkSsidForSpelling(ssid[i]).c_str(), pass[i]);
       }
     }
@@ -214,43 +186,22 @@ void YoYoWiFiManager::connectToWifi(String credentials) {
   */
 }
 
-String YoYoWiFiManager::checkSsidForSpelling(String incomingSSID) {
-  int n = WiFi.scanNetworks();
-  int currMatch = 255;
-  int prevMatch = currMatch;
-  int matchID;
-  Serial.println("scan done");
-  if (n == 0) {
-    Serial.println("no networks found");
-    Serial.println("can't find any wifi in the area");
-    return incomingSSID;
-  } else {
-    Serial.print(n);
-    Serial.println(" networks found");
-    for (int i = 0; i < n; ++i) {
-      Serial.println(WiFi.SSID(i));
-      String networkSSID = WiFi.SSID(i);
-      if (networkSSID.length() <= SSID_MAX_LENGTH) {
-        currMatch = Levenshtein::levenshteinIgnoreCase(incomingSSID.c_str(), WiFi.SSID(i).c_str()) < 2;
-        if (Levenshtein::levenshteinIgnoreCase(incomingSSID.c_str(), WiFi.SSID(i).c_str()) < 2) {
-          if (currMatch < prevMatch) {
-            prevMatch = currMatch;
-            matchID = i;
-          }
-        }
-      } else {
-        // SSID too long
-        Serial.println("SSID too long for use with current ESP-IDF");
-      }
-    }
-    if (prevMatch != 255) {
-      Serial.println("Found a match!");
-      return WiFi.SSID(matchID);
-    } else {
-      Serial.println("can't find any wifi that are close enough matches in the area");
-      return incomingSSID;
+bool YoYoWiFiManager::findNetwork(char const *ssid, char *matchingSSID, bool autocomplete, bool autocorrect, int autocorrectError) {
+  bool result = false;
+
+  int numberOfNetworks = WiFi.scanNetworks();
+  for(int n = 0; n < numberOfNetworks && !result; ++n) {
+    bool match = WiFi.SSID(n).equals(ssid) || 
+                  (autocomplete && WiFi.SSID(n).startsWith(ssid)) || 
+                  (autocorrect && Levenshtein::levenshteinIgnoreCase(ssid, WiFi.SSID(n).c_str()) < autocorrectError);
+
+    if(match) {
+      result = true;
+      strcpy(matchingSSID, WiFi.SSID(n).c_str());
     }
   }
+
+  return(result);
 }
 
 void YoYoWiFiManager::wifiCheck() {
@@ -263,44 +214,17 @@ void YoYoWiFiManager::wifiCheck() {
   }
 }
 
-bool YoYoWiFiManager::isWifiValid(String incomingSSID) {
-  int n = WiFi.scanNetworks();
-  int currMatch = 255;
-  int prevMatch = currMatch;
-  int matchID;
-  Serial.println("scan done");
-  if (n == 0) {
-    Serial.println("no networks found");
-    Serial.println("can't find any wifi in the area");
-    return false;
-  } else {
-    Serial.print(n);
-    Serial.println(" networks found");
-    for (int i = 0; i < n; ++i) {
-      Serial.println(WiFi.SSID(i));
-      String networkSSID = WiFi.SSID(i);
-      if (networkSSID.length() <= SSID_MAX_LENGTH) {
-        currMatch = Levenshtein::levenshteinIgnoreCase(incomingSSID.c_str(), WiFi.SSID(i).c_str()) < 2;
-        if (Levenshtein::levenshteinIgnoreCase(incomingSSID.c_str(), WiFi.SSID(i).c_str()) < 2) {
-          if (currMatch < prevMatch) {
-            prevMatch = currMatch;
-            matchID = i;
-          }
-        }
-      } else {
-        // SSID too long
-        Serial.println("SSID too long for use with current ESP-IDF");
-      }
-    }
-    if (prevMatch != 255) {
-      Serial.println("Found a match!");
-      return true;
-    } else {
-      Serial.println("can't find any wifi that are close enough matches in the area");
-      return false;
+bool YoYoWiFiManager::isSSIDValid(char const *ssid) {
+  bool result = false;
+
+  char foundNetwork[SSID_MAX_LENGTH * 2];
+  if(findNetwork(ssid, foundNetwork, false, true, 2)) {
+    if(strlen(foundNetwork) <= SSID_MAX_LENGTH) {
+      result = true;
     }
   }
 
+  return(result);
 }
 
 void YoYoWiFiManager::listConnectedClients() {
@@ -339,7 +263,8 @@ void YoYoWiFiManager::update() {
 }
 
 
-
+//AsyncWebHandler
+//===============
 
 bool YoYoWiFiManager::canHandle(AsyncWebServerRequest *request) {
   //we can handle anything!
@@ -514,7 +439,34 @@ bool YoYoWiFiManager::setCredentials(JsonVariant json) {
 void YoYoWiFiManager::getScan(AsyncWebServerRequest * request) {
     AsyncResponseStream *response = request->beginResponseStream("application/json");
 
-    //TODO:
-    //response->print(getScanAsJsonString());
+    response->print(getScanAsJsonString());
     request->send(response);
+}
+
+String YoYoWiFiManager::getScanAsJsonString() {
+  String jsonString;
+
+  StaticJsonDocument<1000> jsonDoc;
+  getScanAsJson(jsonDoc);
+  serializeJson(jsonDoc[0], jsonString);
+
+  return (jsonString);
+}
+
+void YoYoWiFiManager::getScanAsJson(JsonDocument& jsonDoc) {
+  JsonArray networks = jsonDoc.createNestedArray();
+
+  int n = WiFi.scanNetworks();
+  n = (n > MAX_NETWORKS_TO_SCAN) ? MAX_NETWORKS_TO_SCAN : n;
+
+  //Array is ordered by signal strength - strongest first
+  for (int i = 0; i < n; ++i) {
+    String networkSSID = WiFi.SSID(i);
+    if (networkSSID.length() <= SSID_MAX_LENGTH) {
+      JsonObject network  = networks.createNestedObject();
+      network["SSID"] = WiFi.SSID(i);
+      network["BSSID"] = WiFi.BSSIDstr(i);
+      network["RSSI"] = WiFi.RSSI(i);
+    }
+  }
 }
