@@ -414,25 +414,12 @@ String YoYoWiFiManager::getPeersAsJsonString() {
   getPeersAsJson(jsonDoc);
   serializeJson(jsonDoc[0], jsonString);
 
+  Serial.println(jsonString);
+
   return (jsonString);
 }
 
 void YoYoWiFiManager::getPeersAsJson(JsonDocument& jsonDoc) {
-  /*
-  JsonArray peers = jsonDoc.createNestedArray();
-
-  wifi_sta_list_t stationList;
-  esp_wifi_ap_get_sta_list(&stationList);  
-
-  for (int i = 0; i < stationList.num; ++i) {
-    wifi_sta_info_t station = stationList.sta[i];
-
-    JsonObject peer  = peers.createNestedObject();
-    //network["mac"] = WiFi.SSID(i);
-    //network["ip"] = WiFi.BSSIDstr(i);
-  }
-  */
-
   wifi_sta_list_t wifi_sta_list;
   tcpip_adapter_sta_list_t adapter_sta_list;
  
@@ -441,24 +428,18 @@ void YoYoWiFiManager::getPeersAsJson(JsonDocument& jsonDoc) {
  
   esp_wifi_ap_get_sta_list(&wifi_sta_list);
   tcpip_adapter_get_sta_list(&wifi_sta_list, &adapter_sta_list);
+
+  JsonArray peers = jsonDoc.createNestedArray();
  
+  char macAddressAsString[17];
   for (int i = 0; i < adapter_sta_list.num; i++) {
- 
     tcpip_adapter_sta_info_t station = adapter_sta_list.sta[i];
  
-    Serial.print("station nr ");
-    Serial.println(i);
+    JsonObject peer  = peers.createNestedObject();
+    mac_addr_to_c_str(station.mac, macAddressAsString);
+    peer["mac"] = macAddressAsString;
  
-    Serial.print("MAC: ");
- 
-    for(int i = 0; i< 6; i++){
-      
-      Serial.printf("%02X", station.mac[i]);  
-      if(i<5)Serial.print(":");
-    }
- 
-    Serial.print("\nIP: ");  
-    Serial.println(ip4addr_ntoa(&(station.ip)));    
+    peer["ip"] =ip4addr_ntoa(&(station.ip));    
   }
 }
 
@@ -495,4 +476,12 @@ void YoYoWiFiManager::getScanAsJson(JsonDocument& jsonDoc) {
       network["RSSI"] = WiFi.RSSI(i);
     }
   }
+}
+
+bool YoYoWiFiManager::mac_addr_to_c_str(uint8_t *mac, char *str) {
+  bool success = true;
+
+  sprintf(str, "%02X:%02X:%02X:%02X:%02X:%02X\0", mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
+
+  return(success);
 }

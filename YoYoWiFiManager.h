@@ -106,6 +106,9 @@ class YoYoWiFiManager : public AsyncWebHandler {
     bool setSettings(JsonVariant json);
     void getScan(AsyncWebServerRequest * request);
     void getPeers(AsyncWebServerRequest * request);
+
+  private:
+    bool mac_addr_to_c_str(uint8_t *mac, char *str);
 };
 
 #endif
