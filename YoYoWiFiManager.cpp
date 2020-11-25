@@ -431,16 +431,17 @@ void YoYoWiFiManager::getPeersAsJson(JsonDocument& jsonDoc) {
 
   JsonArray peers = jsonDoc.createNestedArray();
  
-  char macAddressAsString[17];
+  char *macAddressAsString = new char[18];
   for (int i = 0; i < adapter_sta_list.num; i++) {
     tcpip_adapter_sta_info_t station = adapter_sta_list.sta[i];
  
     JsonObject peer  = peers.createNestedObject();
+    peer["IP"] = ip4addr_ntoa(&(station.ip));
+    Serial.println(station.mac[0]);
     mac_addr_to_c_str(station.mac, macAddressAsString);
-    peer["mac"] = macAddressAsString;
- 
-    peer["ip"] =ip4addr_ntoa(&(station.ip));    
+    peer["MAC"] = macAddressAsString;   
   }
+  delete macAddressAsString;
 }
 
 void YoYoWiFiManager::getScan(AsyncWebServerRequest * request) {
