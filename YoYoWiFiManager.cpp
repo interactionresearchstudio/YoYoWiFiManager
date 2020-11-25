@@ -414,8 +414,6 @@ String YoYoWiFiManager::getPeersAsJsonString() {
   getPeersAsJson(jsonDoc);
   serializeJson(jsonDoc[0], jsonString);
 
-  Serial.println(jsonString);
-
   return (jsonString);
 }
 
@@ -437,7 +435,7 @@ void YoYoWiFiManager::getPeersAsJson(JsonDocument& jsonDoc) {
  
     JsonObject peer  = peers.createNestedObject();
     peer["IP"] = ip4addr_ntoa(&(station.ip));
-    
+
     mac_addr_to_c_str(station.mac, macAddressAsString);
     peer["MAC"] = macAddressAsString;   
   }
