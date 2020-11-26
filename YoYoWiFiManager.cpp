@@ -314,19 +314,18 @@ void YoYoWiFiManager::handleBody(AsyncWebServerRequest * request, uint8_t *data,
   if (request->method() == HTTP_GET) {
   }
   else if (request->method() == HTTP_POST) {
-    bool success = false;
-
     if(request->url().startsWith("/yoyo")) {
       String json = "";
       for (int i = 0; i < len; i++)  json += char(data[i]);
 
       StaticJsonDocument<1024> jsonDoc;
       if (!deserializeJson(jsonDoc, json)) {
-        success = onYoYoCommandPOST(request, jsonDoc.as<JsonVariant>());
+        onYoYoCommandPOST(request, jsonDoc.as<JsonVariant>());
       }
     }
-
-    request->send(success ? 200 : 400);
+    else {
+      request->send(404);
+    }
   }
   else {
   }
@@ -363,32 +362,33 @@ String YoYoWiFiManager::getContentType(String filename) {
 void YoYoWiFiManager::onYoYoCommandGET(AsyncWebServerRequest *request) {
   bool success = false;
 
-  Serial.println("getSettings");
   AsyncResponseStream *response = request->beginResponseStream("application/json");
 
   StaticJsonDocument<1024> settingsJsonDoc;
   if(yoYoCommandGetHandler) {
-    yoYoCommandGetHandler(request->url(), settingsJsonDoc.as<JsonVariant>());
+    success = yoYoCommandGetHandler(request->url(), settingsJsonDoc.as<JsonVariant>());
+  }
+
+  if(success) {
+    String jsonString;
+    serializeJson(settingsJsonDoc, jsonString);
+    response->print(jsonString);
+
+    request->send(response);
   }
   else {
-    //TODO: create empty document
+    request->send(400);
   }
-
-  String jsonString;
-  serializeJson(settingsJsonDoc, jsonString);
-  response->print(jsonString);
-
-  request->send(response);
 }
 
-bool YoYoWiFiManager::onYoYoCommandPOST(AsyncWebServerRequest *request, JsonVariant json) {
+void YoYoWiFiManager::onYoYoCommandPOST(AsyncWebServerRequest *request, JsonVariant json) {
   bool success = false;
 
   if(yoYoCommandPostHandler) {
     success = yoYoCommandPostHandler(request->url(), json);
   }
 
-  return (success);
+  request->send(success ? 200 : 404);
 }
 
 void YoYoWiFiManager::getPeers(AsyncWebServerRequest * request) {

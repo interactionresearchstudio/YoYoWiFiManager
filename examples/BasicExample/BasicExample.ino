@@ -47,6 +47,25 @@ bool onYoYoCommandGET(const String &url, JsonVariant json) {
   //put the results of this into the json object
   Serial.println("onYoYoCommandGET " + url);
   
+  if(url.equals("/yoyo/settings")) {
+    success = true;
+    json["payload"] = "hey! hey!";
+  }
+
+ return(success);
+}
+
+bool onYoYoCommandPOST(const String &url, JsonVariant json) {
+  bool success = false;
+  
+  //read this json object and do something
+  Serial.println("onYoYoCommandPOST " + url);
+
+  if(url.equals("/yoyo/settings")) {
+    success = true;
+    serializeJson(json, Serial);
+  }
+
   /*
   Serial.println("getSettings");
 
@@ -75,27 +94,6 @@ bool onYoYoCommandGET(const String &url, JsonVariant json) {
     //sendWifiCredentials();
     success = true;
   }
-  */
-
- return(success);
-}
-
-bool onYoYoCommandPOST(const String &url, JsonVariant json) {
-  bool success = false;
-  
-  //read this json object and do something
-  Serial.println("onYoYoCommandPOST " + url);
-
-  //TODO:
-  /*
-  settingsJsonDoc["local_mac"] = myID;
-  settingsJsonDoc["local_ssid"] = "";
-  settingsJsonDoc["local_pass_len"] = 0; //local_pass.length;
-  settingsJsonDoc["remote_ssid"] = "";
-  settingsJsonDoc["remote_pass_len"] = 0; //remote_pass.length;
-  settingsJsonDoc["remote_mac"] = getRemoteMacAddress(1);
-  settingsJsonDoc["local_paired_status"] = getCurrentPairedStatusAsString();
-  Serial.println(getCurrentPairedStatusAsString());
   */
 
   return(success);
