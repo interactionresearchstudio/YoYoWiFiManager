@@ -41,9 +41,9 @@ class YoYoWiFiManager : public AsyncWebHandler {
 
     uint8_t wifiLEDPin;
 
-    typedef bool (*callbackPtr)(char *);
-    callbackPtr onReadSettings = NULL;
-    callbackPtr onWriteSettings = NULL;
+    typedef bool (*callbackPtr)(const String&, JsonVariant);
+    callbackPtr yoYoCommandGetHandler = NULL;
+    callbackPtr yoYoCommandPostHandler = NULL;
 
     enum PAIRED_STATUS {
       remoteSetup,
@@ -75,19 +75,25 @@ class YoYoWiFiManager : public AsyncWebHandler {
     bool isSSIDValid(char const *ssid);
     void printWifiStatus(uint8_t status);
 
-    String getScanAsJsonString();
-    void getScanAsJson(JsonDocument& jsonDoc);
+    String getNetworksAsJsonString();
+    void getNetworksAsJson(JsonDocument& jsonDoc);
 
     String getPeersAsJsonString();
     void getPeersAsJson(JsonDocument& jsonDoc);
 
-  public:
-    YoYoWiFiManager(callbackPtr onReadSettings = NULL, callbackPtr onWriteSettings = NULL, uint8_t wifiLEDPin = 2);
+    int updatePeerList();
+    bool getPeerN(int n, char *ipAddress, char *macAddress, bool unchecked = false);
 
-    boolean autoConnect(char const *apName, char const *apPassword = NULL, bool force = false);
+    wifi_sta_list_t wifi_sta_list;
+    tcpip_adapter_sta_list_t adapter_sta_list;
+
+  public:
+    YoYoWiFiManager(callbackPtr getHandler = NULL, callbackPtr postHandler = NULL, uint8_t wifiLEDPin = 2);
+
+    boolean begin(char const *apName, char const *apPassword = NULL, bool autoconnect = false);
 
     void wifiCheck();
-    void connectToWifi(String credentials);
+    void connect();
     bool joinPeerNetwork(char const *apName, char const *apPassword);
     void createPeerNetwork(char const *apName, char const *apPassword);
     bool isConnected();
@@ -102,9 +108,9 @@ class YoYoWiFiManager : public AsyncWebHandler {
     void handleBody(AsyncWebServerRequest * request, uint8_t *data, size_t len, size_t index, size_t total);
     void sendFile(AsyncWebServerRequest * request, String path);
     String getContentType(String filename);
-    void getSettings(AsyncWebServerRequest *request);
-    bool setSettings(JsonVariant json);
-    void getScan(AsyncWebServerRequest * request);
+    void onYoYoCommandGET(AsyncWebServerRequest *request);
+    bool onYoYoCommandPOST(AsyncWebServerRequest *request, JsonVariant json);
+    void getNetworks(AsyncWebServerRequest * request);
     void getPeers(AsyncWebServerRequest * request);
 
   private:

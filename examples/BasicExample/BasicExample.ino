@@ -8,8 +8,8 @@ void setup() {
   Serial.begin(115200);
   Serial.println("HELLO");
 
-  wifiManager = new YoYoWiFiManager(onReadSettings, onWriteSettings);
-  wifiManager -> autoConnect("YoYoMachines", "blinkblink");
+  wifiManager = new YoYoWiFiManager(onYoYoCommandGET, onYoYoCommandPOST);
+  wifiManager -> begin("YoYoMachines", "blinkblink", false);
   /*
   //loadCredentials();
   //setPairedStatus();
@@ -41,9 +41,12 @@ void loop() {
   }
 }
 
-bool onReadSettings(char *json) {
-  Serial.println("onReadSettings");
+bool onYoYoCommandGET(const String &url, JsonVariant json) {
+  bool success = false;
 
+  //put the results of this into the json object
+  Serial.println("onYoYoCommandGET " + url);
+  
   /*
   Serial.println("getSettings");
 
@@ -73,10 +76,15 @@ bool onReadSettings(char *json) {
     success = true;
   }
   */
+
+ return(success);
 }
 
-bool onWriteSettings(char *json) {
-  Serial.println("onWriteSettings");
+bool onYoYoCommandPOST(const String &url, JsonVariant json) {
+  bool success = false;
+  
+  //read this json object and do something
+  Serial.println("onYoYoCommandPOST " + url);
 
   //TODO:
   /*
@@ -89,6 +97,8 @@ bool onWriteSettings(char *json) {
   settingsJsonDoc["local_paired_status"] = getCurrentPairedStatusAsString();
   Serial.println(getCurrentPairedStatusAsString());
   */
+
+  return(success);
 }
 
 // Generates a unique ID based on the ESP32's mac

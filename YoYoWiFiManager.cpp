@@ -3,19 +3,31 @@
 int YoYoWiFiManager::currentPairedStatus = remoteSetup;
 int YoYoWiFiManager::currentSetupStatus = setup_pending;
 
-YoYoWiFiManager::YoYoWiFiManager(callbackPtr onReadSettings, callbackPtr onWriteSettings, uint8_t wifiLEDPin) {
-  this -> onReadSettings = onReadSettings;
-  this -> onWriteSettings = onWriteSettings;
+YoYoWiFiManager::YoYoWiFiManager(callbackPtr getHandler, callbackPtr postHandler, uint8_t wifiLEDPin) {
+  this -> yoYoCommandGetHandler = getHandler;
+  this -> yoYoCommandPostHandler = postHandler;
 
   Serial.println("YoYoWiFiManager");
   this -> wifiLEDPin = wifiLEDPin;
 
+  memset(&wifi_sta_list, 0, sizeof(wifi_sta_list));
+  memset(&adapter_sta_list, 0, sizeof(adapter_sta_list));
+
   SPIFFS.begin();
 }
 
-boolean YoYoWiFiManager::autoConnect(char const *apName, char const *apPassword, bool force) {
-  if(!credentials.available() || force) {
-    Serial.println("no credentials available");
+boolean YoYoWiFiManager::begin(char const *apName, char const *apPassword, bool autoconnect) {
+  if(autoconnect && credentials.available()) {
+    //TODO: attempt to connect using credentials:
+
+    Serial.println("credentials available");
+    int N = credentials.getQuantity();
+    for(int n = 0; n < N; ++n) {
+      wifiMulti.addAP(credentials.getSSID(n) -> c_str(), credentials.getPassword(n) -> c_str());
+      //TODO: handle timeout
+    }
+  }
+  else {
     if(joinPeerNetwork(apName, apPassword)) {
       //become client
       currentSetupStatus = setup_client;
@@ -26,20 +38,6 @@ boolean YoYoWiFiManager::autoConnect(char const *apName, char const *apPassword,
       createPeerNetwork(apName, apPassword);
     }
   }
-  else {
-    Serial.println("credentials available");
-    int N = credentials.getQuantity();
-    for(int n = 0; n < N; ++n) {
-      wifiMulti.addAP(credentials.getSSID(n) -> c_str(), credentials.getPassword(n) -> c_str());
-      //TODO: handle timeout
-    }
-  }
-
-  // while ((wifiMulti.run() != WL_CONNECTED)) {
-  //   delay(500);
-  //   yield();
-  //   Serial.print(".");
-  // }
 
   return(true);
 }
@@ -100,7 +98,7 @@ void YoYoWiFiManager::startWebServer() {
   webserver.begin();
 }
 
-void YoYoWiFiManager::connectToWifi(String credentials) {
+void YoYoWiFiManager::connect() {
   /*
   String _wifiCredentials = credentials;
   const size_t capacity = 2 * JSON_ARRAY_SIZE(6) + JSON_OBJECT_SIZE(2) + 150;
@@ -274,72 +272,64 @@ void YoYoWiFiManager::handleRequest(AsyncWebServerRequest *request) {
   Serial.print("handleRequest: ");
   Serial.println(request->url());
 
-  //if (!isResetting) {     //TODO: I don't think we need this anymore?
-    if (request->method() == HTTP_GET) {
-      if (request->url() == "/settings")    getSettings(request);
-      else if (request->url() == "/scan")   getScan(request);
-      else if (request->url() == "/peers")  getPeers(request);
-      else if (SPIFFS.exists(request->url())) {
-        sendFile(request, request->url());
-      }
-      else if (request->url().endsWith(".html") || 
-                request->url().endsWith("/") ||
-                request->url().endsWith("generate_204") ||
-                request->url().endsWith("redirect"))  {
-        sendFile(request, "/index.html");
-      }
-      else if (request->url().endsWith("connecttest.txt") || 
-                request->url().endsWith("ncsi.txt")) {
-        request->send(200, "text/plain", "Microsoft NCSI");
-      }
-      else if (strstr(request->url().c_str(), "generate_204_") != NULL) {
-        Serial.println("you must be huawei!");
-        sendFile(request, "/index.html");
-      }
-      else {
-        request->send(304);
-      }
+  if (request->method() == HTTP_GET) {
+    if(request->url().startsWith("/yoyo")) {
+      if (request->url() == "/yoyo/networks")    getNetworks(request);
+      else if (request->url() == "/yoyo/peers")  getPeers(request);
+      else onYoYoCommandGET(request);
     }
-  //}
+    else if (SPIFFS.exists(request->url())) {
+      sendFile(request, request->url());
+    }
+    else if (request->url().endsWith(".html") || 
+              request->url().endsWith("/") ||
+              request->url().endsWith("generate_204") ||
+              request->url().endsWith("redirect"))  {
+      sendFile(request, "/index.html");
+    }
+    else if (request->url().endsWith("connecttest.txt") || 
+              request->url().endsWith("ncsi.txt")) {
+      request->send(200, "text/plain", "Microsoft NCSI");
+    }
+    else if (strstr(request->url().c_str(), "generate_204_") != NULL) {
+      Serial.println("you must be huawei!");
+      sendFile(request, "/index.html");
+    }
+    else {
+      request->send(304);
+    }
+  }
+  else if (request->method() == HTTP_POST) {
+  }
+  else {
+  }
 }
 
 void YoYoWiFiManager::handleBody(AsyncWebServerRequest * request, uint8_t *data, size_t len, size_t index, size_t total) {
   Serial.print("handleBody: ");
   Serial.println(request->url());
 
-  //if (!isResetting) {     //TODO: I don't think we need this anymore?
-    if (request->method() == HTTP_POST) {
-      if (request->url() == "/settings") {
-        String json = "";
-        for (int i = 0; i < len; i++)  json += char(data[i]);
+  //TODO: if the POST has no payload this function will not get called and the request will time out without an error response to client - does it go to handleRequest()?
 
-        StaticJsonDocument<1024> credentialsJsonDoc;
-        if (!deserializeJson(credentialsJsonDoc, json)) {
-          if(setSettings(credentialsJsonDoc.as<JsonObject>())) request->send(200);
+  if (request->method() == HTTP_GET) {
+  }
+  else if (request->method() == HTTP_POST) {
+    bool success = false;
 
-          else request->send(400);
-        }
-      }
-      else if(request->url() == "/reboot") {
-          String json = "";
-          for (int i = 0; i < len; i++)  json += char(data[i]);
+    if(request->url().startsWith("/yoyo")) {
+      String json = "";
+      for (int i = 0; i < len; i++)  json += char(data[i]);
 
-          StaticJsonDocument<256> rebootJsonDoc;
-          if (!deserializeJson(rebootJsonDoc, json)) {
-            //TODO:
-            // int delayMs = rebootJsonDoc["delay"];
-
-            // softReset(delayMs);
-            // socket_server.textAll("RESTART");
-          }
-
-          request->send(200);
-      }
-      else {
-        request->send(404);
+      StaticJsonDocument<1024> jsonDoc;
+      if (!deserializeJson(jsonDoc, json)) {
+        success = onYoYoCommandPOST(request, jsonDoc.as<JsonVariant>());
       }
     }
-  //}
+
+    request->send(success ? 200 : 400);
+  }
+  else {
+  }
 }
 
 void YoYoWiFiManager::sendFile(AsyncWebServerRequest * request, String path) {
@@ -370,31 +360,32 @@ String YoYoWiFiManager::getContentType(String filename) {
   return "text/plain";
 }
 
-void YoYoWiFiManager::getSettings(AsyncWebServerRequest *request) {
+void YoYoWiFiManager::onYoYoCommandGET(AsyncWebServerRequest *request) {
+  bool success = false;
+
   Serial.println("getSettings");
   AsyncResponseStream *response = request->beginResponseStream("application/json");
 
   StaticJsonDocument<1024> settingsJsonDoc;
-  settingsJsonDoc["YoYoWiFiManager"] = "";
+  if(yoYoCommandGetHandler) {
+    yoYoCommandGetHandler(request->url(), settingsJsonDoc.as<JsonVariant>());
+  }
+  else {
+    //TODO: create empty document
+  }
 
   String jsonString;
   serializeJson(settingsJsonDoc, jsonString);
   response->print(jsonString);
 
-  if(onWriteSettings) {
-    char json[0];
-    onWriteSettings(json);
-  }
-
   request->send(response);
 }
 
-bool YoYoWiFiManager::setSettings(JsonVariant json) {
+bool YoYoWiFiManager::onYoYoCommandPOST(AsyncWebServerRequest *request, JsonVariant json) {
   bool success = false;
 
-  if(onReadSettings) {
-    char json[0];
-    success = onReadSettings(json);
+  if(yoYoCommandPostHandler) {
+    success = yoYoCommandPostHandler(request->url(), json);
   }
 
   return (success);
@@ -418,48 +409,67 @@ String YoYoWiFiManager::getPeersAsJsonString() {
 }
 
 void YoYoWiFiManager::getPeersAsJson(JsonDocument& jsonDoc) {
-  wifi_sta_list_t wifi_sta_list;
-  tcpip_adapter_sta_list_t adapter_sta_list;
- 
-  memset(&wifi_sta_list, 0, sizeof(wifi_sta_list));
-  memset(&adapter_sta_list, 0, sizeof(adapter_sta_list));
- 
-  esp_wifi_ap_get_sta_list(&wifi_sta_list);
-  tcpip_adapter_get_sta_list(&wifi_sta_list, &adapter_sta_list);
-
+  //TODO: if client of AP
   JsonArray peers = jsonDoc.createNestedArray();
  
-  char *macAddressAsString = new char[18];
-  for (int i = 0; i < adapter_sta_list.num; i++) {
-    tcpip_adapter_sta_info_t station = adapter_sta_list.sta[i];
+  int peerCount = updatePeerList();
+
+  char *ipAddress = new char[17];
+  char *macAddress = new char[18];
+  for (int i = 0; i < peerCount; i++) {
+    getPeerN(i, ipAddress, macAddress, true);
  
     JsonObject peer  = peers.createNestedObject();
-    peer["IP"] = ip4addr_ntoa(&(station.ip));
-
-    mac_addr_to_c_str(station.mac, macAddressAsString);
-    peer["MAC"] = macAddressAsString;   
+    peer["IP"] = ipAddress;
+    peer["MAC"] = macAddress;   
   }
-  delete macAddressAsString;
+  delete ipAddress;
+  delete macAddress;
 }
 
-void YoYoWiFiManager::getScan(AsyncWebServerRequest * request) {
+int YoYoWiFiManager::updatePeerList() {
+  int count = 0;
+
+  esp_wifi_ap_get_sta_list(&wifi_sta_list);
+  tcpip_adapter_get_sta_list(&wifi_sta_list, &adapter_sta_list);
+  count = adapter_sta_list.num;
+
+  return(count);
+}
+
+bool YoYoWiFiManager::getPeerN(int n, char *ipAddress, char *macAddress, bool unchecked) {
+  bool success = false;
+
+  if(unchecked || (n >=0 && n < updatePeerList())) {
+    tcpip_adapter_sta_info_t station = adapter_sta_list.sta[n];
+
+    strcpy(ipAddress, ip4addr_ntoa(&(station.ip)));
+    mac_addr_to_c_str(station.mac, macAddress);
+
+    success = true;
+  }
+
+  return(success);
+}
+
+void YoYoWiFiManager::getNetworks(AsyncWebServerRequest * request) {
     AsyncResponseStream *response = request->beginResponseStream("application/json");
 
-    response->print(getScanAsJsonString());
+    response->print(getNetworksAsJsonString());
     request->send(response);
 }
 
-String YoYoWiFiManager::getScanAsJsonString() {
+String YoYoWiFiManager::getNetworksAsJsonString() {
   String jsonString;
 
   StaticJsonDocument<1000> jsonDoc;
-  getScanAsJson(jsonDoc);
+  getNetworksAsJson(jsonDoc);
   serializeJson(jsonDoc[0], jsonString);
 
   return (jsonString);
 }
 
-void YoYoWiFiManager::getScanAsJson(JsonDocument& jsonDoc) {
+void YoYoWiFiManager::getNetworksAsJson(JsonDocument& jsonDoc) {
   JsonArray networks = jsonDoc.createNestedArray();
 
   int n = WiFi.scanNetworks();

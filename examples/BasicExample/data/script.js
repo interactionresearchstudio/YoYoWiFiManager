@@ -27,7 +27,7 @@ function onKeyPressed(event) {
 function populateNetworksList(selectedNetwork) {
     let networks = $('#networks-list-select');
 
-    $.getJSON('/scan', function (json) {
+    $.getJSON('/yoyo/networks', function (json) {
         networks.empty();
         $.each(json, function (key, entry) {
             let network = $('<option></option>');
@@ -54,7 +54,7 @@ function onSaveButtonClicked(event) {
     //NB dataType is 'text' otherwise json validation fails on Safari
     $.ajax({
         type: "POST",
-        url: "/settings",
+        url: "/yoyo/settings",
         data: JSON.stringify(data),
         dataType: 'text',
         contentType: 'application/json; charset=utf-8',
