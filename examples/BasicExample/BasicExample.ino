@@ -35,6 +35,20 @@ void setup() {
   // }
 }
 
+/*
+      YY_NO_SHIELD        = WL_NO_SHIELD,
+      YY_IDLE_STATUS      = WL_IDLE_STATUS,
+      YY_NO_SSID_AVAIL    = WL_NO_SSID_AVAIL,
+      YY_SCAN_COMPLETED   = WL_SCAN_COMPLETED,
+      YY_CONNECTED        = WL_CONNECTED,
+      YY_CONNECT_FAILED   = WL_CONNECT_FAILED,
+      YY_CONNECTION_LOST  = WL_CONNECTION_LOST,
+      YY_DISCONNECTED     = WL_DISCONNECTED,
+      //yo-yo specific:
+      YY_CONNECTED_PEER_CLIENT,
+      YY_CONNECTED_PEER_SERVER
+*/
+
 void loop() {
   if(wifiManager != NULL) {
      wifiManager -> update();

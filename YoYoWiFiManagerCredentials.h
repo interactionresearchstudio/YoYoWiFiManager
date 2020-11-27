@@ -75,14 +75,14 @@ class YoYoWiFiManagerCredentials {
             return(getQuantity() > 0);
         }
 
-        void add(String ssid, String password) {
+        void add(const char *ssid, const char *password) {
             int oldestN = YoYoWiFiManagerCredentialsListMax-1;
             if(credentialsAsList[oldestN] != NULL) delete credentialsAsList[oldestN];
 
             for(int n = oldestN; n > 0; --n) {
                 credentialsAsList[n] = credentialsAsList[n-1];
             }
-            credentialsAsList[0] = new String(ssid + "," + password);   //TODO: double check seprator chars can be relied on;
+            credentialsAsList[0] = new String(String(ssid) + "," + String(password));   //TODO: double check seprator chars can be relied on;
 
             saveCredentials();
         }

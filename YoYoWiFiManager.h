@@ -26,6 +26,32 @@
 class YoYoWiFiManager : public AsyncWebHandler {
   private:
     WiFiMulti wifiMulti;
+    
+    typedef enum {
+      YY_MODE_NONE,
+      YY_MODE_CLIENT,
+      YY_MODE_PEER_CLIENT,
+      YY_MODE_PEER_SERVER
+    } yy_mode_t;
+    yy_mode_t currentMode = YY_MODE_NONE;
+
+    typedef enum {
+      //compatibility with wl_definitions.h
+      YY_NO_SHIELD        = WL_NO_SHIELD,
+      YY_IDLE_STATUS      = WL_IDLE_STATUS,
+      YY_NO_SSID_AVAIL    = WL_NO_SSID_AVAIL,
+      YY_SCAN_COMPLETED   = WL_SCAN_COMPLETED,
+      YY_CONNECTED        = WL_CONNECTED,
+      YY_CONNECT_FAILED   = WL_CONNECT_FAILED,
+      YY_CONNECTION_LOST  = WL_CONNECTION_LOST,
+      YY_DISCONNECTED     = WL_DISCONNECTED,
+      //yo-yo specific:
+      YY_CONNECTED_PEER_CLIENT,
+      YY_CONNECTED_PEER_SERVER
+    } yy_status_t;
+    yy_status_t currentStatus = YY_IDLE_STATUS;
+
+    void onStatusChanged();
 
     const byte DNS_PORT = 53;
     DNSServer dnsServer;
@@ -33,47 +59,15 @@ class YoYoWiFiManager : public AsyncWebHandler {
     AsyncWebServer webserver = AsyncWebServer(80);
 
     YoYoWiFiManagerCredentials credentials;
-
-    String wifiCredentials = "";
-    String macCredentials = "";
-    String myID = "";
-    bool inList;
-
     uint8_t wifiLEDPin;
 
     typedef bool (*callbackPtr)(const String&, JsonVariant);
     callbackPtr yoYoCommandGetHandler = NULL;
     callbackPtr yoYoCommandPostHandler = NULL;
 
-    enum PAIRED_STATUS {
-      remoteSetup,
-      localSetup,
-      pairedSetup
-    };
-    static int currentPairedStatus;
-
-    enum SETUP_STATUS {
-      setup_pending,
-      setup_client,
-      setup_server,
-      setup_finished
-    };
-    static int currentSetupStatus;
-
-    bool disconnected = false;
-
-    int getNumberOfMacAddresses();
-    void addToMacAddressJSON(String addr);
-
     void startWebServer();
 
-    //-----------------------------
-    uint32_t wificheckMillis;
-    uint32_t wifiCheckTime = 5000;
-
-
-    bool isSSIDValid(char const *ssid);
-    void printWifiStatus(uint8_t status);
+    bool addAP(String ssid, String pass);
 
     String getNetworksAsJsonString();
     void getNetworksAsJson(JsonDocument& jsonDoc);
@@ -94,13 +88,14 @@ class YoYoWiFiManager : public AsyncWebHandler {
 
     void wifiCheck();
     void connect();
+    void connect(String ssid, String pass = "");
     bool joinPeerNetwork(char const *apName, char const *apPassword);
     void createPeerNetwork(char const *apName, char const *apPassword);
     bool isConnected();
 
     bool findNetwork(char const *ssid, char *matchingSSID, bool autocomplete = false, bool autocorrect = false, int autocorrectError = 0);
 
-    void update();
+    int update();
 
     //AsyncWebHandler:
     bool canHandle(AsyncWebServerRequest *request);
