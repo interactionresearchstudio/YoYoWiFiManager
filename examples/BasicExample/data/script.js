@@ -3,17 +3,22 @@ function init() {
     $('#nextstep').hide();
     $('#alert-text').hide();
 
-    $('#networks-list-select').attr('disabled', true);
-    $('#local_pass').attr('disabled', true);
+    $('#save-button').click(onSaveButtonClicked);
+    $('#password').keypress(onKeyPressed);
 
-    // $.getJSON('/credentials', function (json) {
-    //     $('#config').show();
-    //     configure(json);
-    // });
+    $('#networks-list-select').attr('disabled', true);
+    $('#password').attr('disabled', true);
+
+    $.getJSON('/yoyo/settings', function (json) {
+        $('#config').show();
+        configure(json);
+    });
+}
+
+function configure(json) {
     $('#config').show();
 
-    $('#save-button').click(onSaveButtonClicked);
-    $('#local_pass').keypress(onKeyPressed);
+    console.log(json);
 
     populateNetworksList("");
 }
@@ -38,8 +43,13 @@ function populateNetworksList(selectedNetwork) {
             networks.append(network);
         });
 
-        $('#networks-list-select').attr('disabled', false);
-        $('#local_pass').attr('disabled', false);
+        if($('#networks-list-select option').length > 0) {
+            $('#networks-list-select').attr('disabled', false);
+            $('#local_pass').attr('disabled', false);
+        }
+        else {
+            networks.append('<option>No Networks Found</option>');
+        }
     });
 }
 
@@ -48,7 +58,7 @@ function onSaveButtonClicked(event) {
 
     var data = {
         local_ssid: $('#networks-list-select').children("option:selected").val(),
-        local_pass: $('#local_pass').val()
+        password: $('#password').val()
     };
 
     //NB dataType is 'text' otherwise json validation fails on Safari
