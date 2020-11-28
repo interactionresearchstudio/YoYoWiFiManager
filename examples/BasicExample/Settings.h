@@ -2,6 +2,10 @@
 #define Settings_h
 
 class Settings {
+    public:
+        Settings() {
+
+        }
     /*
     void YoYoWiFiManager::loadCredentials() {
         preferences.begin("scads", false);
