@@ -24,33 +24,34 @@
 #define MAX_NETWORKS_TO_SCAN 5
 
 class YoYoWiFiManager : public AsyncWebHandler {
+  public:
+  typedef enum {
+    YY_MODE_NONE,
+    YY_MODE_CLIENT,
+    YY_MODE_PEER_CLIENT,
+    YY_MODE_PEER_SERVER
+  } yy_mode_t;
+  yy_mode_t currentMode = YY_MODE_NONE;
+
+  typedef enum {
+    //compatibility with wl_status_t (wl_definitions.h)
+    YY_NO_SHIELD        = WL_NO_SHIELD,
+    YY_IDLE_STATUS      = WL_IDLE_STATUS,
+    YY_NO_SSID_AVAIL    = WL_NO_SSID_AVAIL,
+    YY_SCAN_COMPLETED   = WL_SCAN_COMPLETED,
+    YY_CONNECTED        = WL_CONNECTED,
+    YY_CONNECT_FAILED   = WL_CONNECT_FAILED,
+    YY_CONNECTION_LOST  = WL_CONNECTION_LOST,
+    YY_DISCONNECTED     = WL_DISCONNECTED,
+    //yo-yo specific:
+    YY_CONNECTED_PEER_CLIENT,
+    YY_CONNECTED_PEER_SERVER
+  } yy_status_t;
+
   private:
     WiFiMulti wifiMulti;
     
-    typedef enum {
-      YY_MODE_NONE,
-      YY_MODE_CLIENT,
-      YY_MODE_PEER_CLIENT,
-      YY_MODE_PEER_SERVER
-    } yy_mode_t;
-    yy_mode_t currentMode = YY_MODE_NONE;
-
-    typedef enum {
-      //compatibility with wl_definitions.h
-      YY_NO_SHIELD        = WL_NO_SHIELD,
-      YY_IDLE_STATUS      = WL_IDLE_STATUS,
-      YY_NO_SSID_AVAIL    = WL_NO_SSID_AVAIL,
-      YY_SCAN_COMPLETED   = WL_SCAN_COMPLETED,
-      YY_CONNECTED        = WL_CONNECTED,
-      YY_CONNECT_FAILED   = WL_CONNECT_FAILED,
-      YY_CONNECTION_LOST  = WL_CONNECTION_LOST,
-      YY_DISCONNECTED     = WL_DISCONNECTED,
-      //yo-yo specific:
-      YY_CONNECTED_PEER_CLIENT,
-      YY_CONNECTED_PEER_SERVER
-    } yy_status_t;
     yy_status_t currentStatus = YY_IDLE_STATUS;
-
     void onStatusChanged();
 
     const byte DNS_PORT = 53;
@@ -72,6 +73,10 @@ class YoYoWiFiManager : public AsyncWebHandler {
     String getNetworksAsJsonString();
     void getNetworksAsJson(JsonDocument& jsonDoc);
 
+    yy_mode_t createPeerNetwork(char const *apName, char const *apPassword);
+    bool joinPeerNetworkAsClient(char const *apName, char const *apPassword);
+    void joinPeerNetworkAsServer(char const *apName, char const *apPassword);
+
     String getPeersAsJsonString();
     void getPeersAsJson(JsonDocument& jsonDoc);
 
@@ -82,20 +87,19 @@ class YoYoWiFiManager : public AsyncWebHandler {
     tcpip_adapter_sta_list_t adapter_sta_list;
 
   public:
-    YoYoWiFiManager(callbackPtr getHandler = NULL, callbackPtr postHandler = NULL, uint8_t wifiLEDPin = 2);
+    YoYoWiFiManager();
 
+    void init(callbackPtr getHandler = NULL, callbackPtr postHandler = NULL, uint8_t wifiLEDPin = 2);
     boolean begin(char const *apName, char const *apPassword = NULL, bool autoconnect = false);
 
-    void wifiCheck();
     void connect();
     void connect(String ssid, String pass = "");
-    bool joinPeerNetwork(char const *apName, char const *apPassword);
-    void createPeerNetwork(char const *apName, char const *apPassword);
-    bool isConnected();
+
+    void blinkWiFiLED(int count);
 
     bool findNetwork(char const *ssid, char *matchingSSID, bool autocomplete = false, bool autocorrect = false, int autocorrectError = 0);
 
-    int update();
+    uint8_t update();
 
     //AsyncWebHandler:
     bool canHandle(AsyncWebServerRequest *request);

@@ -1,38 +1,16 @@
 #include "YoYoWiFiManager.h"
 #include "Settings.h"
 
-YoYoWiFiManager *wifiManager;
+YoYoWiFiManager wifiManager;
 Settings settings;
+
+uint8_t currentStatus = YoYoWiFiManager::YY_IDLE_STATUS;
 
 void setup() {
   Serial.begin(115200);
-  Serial.println("HELLO");
 
-  wifiManager = new YoYoWiFiManager(onYoYoCommandGET, onYoYoCommandPOST);
-  wifiManager -> begin("YoYoMachines", "blinkblink", false);
-  /*
-  //loadCredentials();
-  //setPairedStatus();
-  myID = generateID();
-
-  if (wifiCredentials == "" || getNumberOfMacAddresses() < 2) {
-    wifiManager.autoConnect("YoYoMachines", "blinkblink"); //blocking
-  }
-  else {
-    Serial.print("List of Mac addresses:");
-    Serial.println(macCredentials);
-    //connect to router to talk to server
-    digitalWrite(wifiLEDPin, 0);
-    connectToWifi(wifiCredentials);
-    //checkForUpdate();
-    currentSetupStatus = setup_finished;
-    Serial.println("setup complete");
-  }
-  */
-
-  // if(WiFi.status() == WL_CONNECTED) {
-  //   //connected
-  // }
+  wifiManager.init(onYoYoCommandGET, onYoYoCommandPOST);
+  wifiManager.begin("YoYoMachines", "blinkblink", false);
 }
 
 /*
@@ -44,14 +22,19 @@ void setup() {
       YY_CONNECT_FAILED   = WL_CONNECT_FAILED,
       YY_CONNECTION_LOST  = WL_CONNECTION_LOST,
       YY_DISCONNECTED     = WL_DISCONNECTED,
-      //yo-yo specific:
       YY_CONNECTED_PEER_CLIENT,
       YY_CONNECTED_PEER_SERVER
 */
 
 void loop() {
-  if(wifiManager != NULL) {
-     wifiManager -> update();
+  uint8_t s = wifiManager.update();
+  if(s != currentStatus) {
+    currentStatus = s;
+    printStatus();
+  }
+
+  if(currentStatus == WL_CONNECTED) {
+
   }
 }
 
@@ -80,37 +63,39 @@ bool onYoYoCommandPOST(const String &url, JsonVariant json) {
     serializeJson(json, Serial);
   }
 
-  /*
-  Serial.println("getSettings");
-
-  String local_ssid = json["local_ssid"].as<String>();
-  String local_pass = json["local_pass"].as<String>();
-  String remote_ssid = json["remote_ssid"].as<String>();
-  String remote_pass = json["remote_pass"].as<String>();
-  String remote_mac = json["remote_mac"].as<String>();
-
-  if (remote_mac != "") {
-    //TODO:
-    //addToMacAddressJSON(remote_mac);
-    success = true;
-  }
-
-  if (remote_pass != "" && remote_ssid != "" && local_ssid != "" && local_pass != "") {
-    //TODO:
-    //addToWiFiJSON(local_ssid, local_pass);
-    //addToWiFiJSON(remote_ssid, remote_pass);
-    //sendWifiCredentials();
-    success = true;
-  }
-  else if (local_pass != "" && local_ssid != "" && remote_ssid == "" && remote_pass == "") {
-    //TODO:
-    //addToWiFiJSON(local_ssid, local_pass);
-    //sendWifiCredentials();
-    success = true;
-  }
-  */
-
   return(success);
+}
+
+void printStatus() {
+  switch (currentStatus) {
+    case YoYoWiFiManager::YY_CONNECTED:
+      Serial.println("YY_CONNECTED");
+      break;
+    case YoYoWiFiManager::YY_IDLE_STATUS:
+      Serial.println("YY_IDLE_STATUS");
+      break;
+    case YoYoWiFiManager::YY_NO_SSID_AVAIL:
+      Serial.println("YY_NO_SSID_AVAIL");
+      break;
+    case YoYoWiFiManager::YY_SCAN_COMPLETED:
+      Serial.println("YY_SCAN_COMPLETED");
+      break;
+    case YoYoWiFiManager::YY_CONNECT_FAILED:
+      Serial.println("YY_CONNECT_FAILED");
+      break;
+    case YoYoWiFiManager::YY_CONNECTION_LOST:
+      Serial.println("YY_CONNECTION_LOST");
+      break;
+    case YoYoWiFiManager::YY_DISCONNECTED:
+      Serial.println("YY_DISCONNECTED");
+      break;
+    case YoYoWiFiManager::YY_CONNECTED_PEER_CLIENT:
+      Serial.println("YY_CONNECTED_PEER_CLIENT");
+      break;
+    case YoYoWiFiManager::YY_CONNECTED_PEER_SERVER:
+      Serial.println("YY_CONNECTED_PEER_SERVER");
+      break;
+  }   
 }
 
 // Generates a unique ID based on the ESP32's mac

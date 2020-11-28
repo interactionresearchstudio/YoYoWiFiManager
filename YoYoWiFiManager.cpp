@@ -1,10 +1,12 @@
 #include "YoYoWiFiManager.h"
 
-YoYoWiFiManager::YoYoWiFiManager(callbackPtr getHandler, callbackPtr postHandler, uint8_t wifiLEDPin) {
+YoYoWiFiManager::YoYoWiFiManager() {
+}
+
+void YoYoWiFiManager::init(callbackPtr getHandler, callbackPtr postHandler, uint8_t wifiLEDPin) {
   this -> yoYoCommandGetHandler = getHandler;
   this -> yoYoCommandPostHandler = postHandler;
 
-  Serial.println("YoYoWiFiManager");
   this -> wifiLEDPin = wifiLEDPin;
 
   memset(&wifi_sta_list, 0, sizeof(wifi_sta_list));
@@ -22,40 +24,28 @@ boolean YoYoWiFiManager::begin(char const *apName, char const *apPassword, bool 
     connect();
   }
   else {
-    if(joinPeerNetwork(apName, apPassword)) {
-      currentMode = YY_MODE_PEER_CLIENT;
-    }
-    else {
-      currentMode = YY_MODE_PEER_SERVER;
-      createPeerNetwork(apName, apPassword);
-    }
+    currentMode = createPeerNetwork(apName, apPassword);
   }
 
   return(true);
 }
 
-// Creates Access Point for other device to connect to
-void YoYoWiFiManager::createPeerNetwork(char const *apName, char const *apPassword) {
-  Serial.print("Wifi name:");
-  Serial.println(apName);
+YoYoWiFiManager::yy_mode_t YoYoWiFiManager::createPeerNetwork(char const *apName, char const *apPassword) {
+  yy_mode_t mode = YY_MODE_NONE;
+  
+  if(joinPeerNetworkAsClient(apName, apPassword)) {
+    currentMode = YY_MODE_PEER_CLIENT;
+  }
+  else {
+    currentMode = YY_MODE_PEER_SERVER;
+    joinPeerNetworkAsServer(apName, apPassword);
+  }
 
-  WiFi.mode(WIFI_AP);
-  delay(2000);
-
-  WiFi.persistent(false);
-  WiFi.softAPConfig(apIP, apIP, IPAddress(255, 255, 255, 0));
-  WiFi.softAP(apName, apPassword);
-  IPAddress myIP = WiFi.softAPIP();
-  Serial.println(myIP);
-
-  //Start captive portal
-  dnsServer.start(DNS_PORT, "*", apIP);
-
-  startWebServer();
+  return(mode);
 }
 
 // Scan and connect to peer wifi network. Returns true if joined.
-boolean YoYoWiFiManager::joinPeerNetwork(char const *apName, char const *apPassword) {
+boolean YoYoWiFiManager::joinPeerNetworkAsClient(char const *apName, char const *apPassword) {
   boolean joinedPeerNetwork = false;
 
   char foundNetwork[SSID_MAX_LENGTH * 2];
@@ -77,6 +67,26 @@ boolean YoYoWiFiManager::joinPeerNetwork(char const *apName, char const *apPassw
   }
 
   return (joinedPeerNetwork);
+}
+
+// Creates Access Point for other device to connect to
+void YoYoWiFiManager::joinPeerNetworkAsServer(char const *apName, char const *apPassword) {
+  Serial.print("Wifi name:");
+  Serial.println(apName);
+
+  WiFi.mode(WIFI_AP);
+  delay(2000);
+
+  WiFi.persistent(false);
+  WiFi.softAPConfig(apIP, apIP, IPAddress(255, 255, 255, 0));
+  WiFi.softAP(apName, apPassword);
+  IPAddress myIP = WiFi.softAPIP();
+  Serial.println(myIP);
+
+  //Start captive portal
+  dnsServer.start(DNS_PORT, "*", apIP);
+
+  startWebServer();
 }
 
 void YoYoWiFiManager::startWebServer() {
@@ -160,7 +170,7 @@ bool YoYoWiFiManager::findNetwork(char const *ssid, char *matchingSSID, bool aut
   return(result);
 }
 
-int YoYoWiFiManager::update() {
+uint8_t YoYoWiFiManager::update() {
   dnsServer.processNextRequest();
 
   uint8_t wlStatus = wifiMulti.run();
@@ -187,6 +197,8 @@ int YoYoWiFiManager::update() {
 void YoYoWiFiManager::onStatusChanged() {
   switch(currentStatus) {
     case YY_CONNECTED:
+      blinkWiFiLED(3);
+
       Serial.println("WiFi connected");
       Serial.println("IP address: ");
       Serial.println(WiFi.localIP());
@@ -210,6 +222,16 @@ void YoYoWiFiManager::onStatusChanged() {
     case YY_DISCONNECTED:
       break;
   }
+}
+
+void YoYoWiFiManager::blinkWiFiLED(int count) {
+  for (byte i = 0; i < count; i++) {
+    digitalWrite(wifiLEDPin, 1);
+    delay(100);
+    digitalWrite(wifiLEDPin, 0);
+    delay(400);
+  }
+  delay(600);
 }
 
 //AsyncWebHandler
@@ -424,7 +446,9 @@ String YoYoWiFiManager::getNetworksAsJsonString() {
 void YoYoWiFiManager::getNetworksAsJson(JsonDocument& jsonDoc) {
   JsonArray networks = jsonDoc.createNestedArray();
 
+  Serial.printf("WIFI STATUS: %i\n", update());
   int n = WiFi.scanNetworks();
+  Serial.printf("getNetworksAsJson  %i\n", n);
   n = (n > MAX_NETWORKS_TO_SCAN) ? MAX_NETWORKS_TO_SCAN : n;
 
   //Array is ordered by signal strength - strongest first
