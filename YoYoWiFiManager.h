@@ -68,7 +68,8 @@ class YoYoWiFiManager : public AsyncWebHandler {
 
     void startWebServer();
 
-    bool addAP(String ssid, String pass);
+    void addKnownNetworks();
+    bool addNetwork(String ssid, String pass, bool save = true);
 
     String getNetworksAsJsonString();
     void getNetworksAsJson(JsonDocument& jsonDoc);
@@ -83,9 +84,6 @@ class YoYoWiFiManager : public AsyncWebHandler {
     int updatePeerList();
     bool getPeerN(int n, char *ipAddress, char *macAddress, bool unchecked = false);
 
-    void getCredentials(AsyncWebServerRequest *request);
-    void setCredentials(AsyncWebServerRequest *request, JsonVariant json);
-
     wifi_sta_list_t wifi_sta_list;
     tcpip_adapter_sta_list_t adapter_sta_list;
 
@@ -94,9 +92,6 @@ class YoYoWiFiManager : public AsyncWebHandler {
 
     void init(callbackPtr getHandler = NULL, callbackPtr postHandler = NULL, uint8_t wifiLEDPin = 2);
     boolean begin(char const *apName, char const *apPassword = NULL, bool autoconnect = false);
-
-    void connect();
-    void connect(String ssid, String pass = "");
 
     void blinkWiFiLED(int count);
 
@@ -116,6 +111,10 @@ class YoYoWiFiManager : public AsyncWebHandler {
 
     void getNetworks(AsyncWebServerRequest * request);
     void getPeers(AsyncWebServerRequest * request);
+
+    void getCredentials(AsyncWebServerRequest *request);
+    void setCredentials(AsyncWebServerRequest *request, JsonVariant json);
+    bool setCredentials(JsonVariant json);
 
   private:
     bool mac_addr_to_c_str(uint8_t *mac, char *str);

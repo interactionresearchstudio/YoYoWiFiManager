@@ -21,7 +21,7 @@ boolean YoYoWiFiManager::begin(char const *apName, char const *apPassword, bool 
 
     Serial.println("credentials available");
     currentMode = YY_MODE_CLIENT;
-    connect();
+    addKnownNetworks();
   }
   else {
     currentMode = createPeerNetwork(apName, apPassword);
@@ -52,7 +52,8 @@ boolean YoYoWiFiManager::joinPeerNetworkAsClient(char const *apName, char const 
   if(findNetwork(apName, foundNetwork, true)) {
     Serial.printf("Found peer network: %s\n", foundNetwork);
 
-    addAP(foundNetwork, apPassword);
+    //TODO: should this really use wifiMulti?
+    addNetwork(foundNetwork, apPassword, false);
     while ((wifiMulti.run() != WL_CONNECTED)) {
       delay(500);
       Serial.print(".");
@@ -96,57 +97,30 @@ void YoYoWiFiManager::startWebServer() {
   webserver.begin();
 }
 
-void YoYoWiFiManager::connect() {
+void YoYoWiFiManager::addKnownNetworks() {
   int credentialsCount = credentials.getQuantity();
   for(int n = 0; n < credentialsCount; ++n) {
-    addAP(credentials.getSSID(n) -> c_str(), credentials.getPassword(n) -> c_str());
+    addNetwork(credentials.getSSID(n) -> c_str(), credentials.getPassword(n) -> c_str(), false);
   }
 }
 
-void YoYoWiFiManager::connect(String ssidAsString, String pass) {
-  const char *ssid = ssidAsString.c_str();
-  char *ssidChecked = new char[SSID_MAX_LENGTH];
-  if(findNetwork(ssid, ssidChecked, false, true, 2)) {
-    if(addAP(ssidChecked, pass)) {
-      credentials.add(ssidChecked, pass.c_str());
-    }
-  }
-
-  /*
-  while (!connectSuccess) {
-    if (millis() - wifiMillis > WIFICONNECTTIMEOUT) {
-      // Timeout, check if we're out of range.
-      while (hasConnected) {
-        // Out of range, keep trying
-        uint8_t _currentStatus = wifiMulti.run();
-        if (_currentStatus == WL_CONNECTED) {
-          digitalWrite(wifiLEDPin, 0);
-          preferences.begin("scads", false);
-          preferences.putBool("hasConnected", true);
-          preferences.end();
-          break;
-        }
-        else {
-          digitalWrite(wifiLEDPin, 1);
-          delay(100);
-          Serial.print(".");
-        }
-        yield();
-      }
-    }
-
-    delay(100);
-    yield();
-    Serial.print(".");
-  }
-  */
-}
-
-bool YoYoWiFiManager::addAP(String ssid, String pass) {
+bool YoYoWiFiManager::addNetwork(String ssidAsString, String passAsString, bool save) {
   bool success = false;
 
-  if(ssid.length() > 0 && ssid.length() <= SSID_MAX_LENGTH) {
-    success = wifiMulti.addAP(ssid.c_str(), pass.c_str());;
+  if(ssidAsString.length() > 0 && ssidAsString.length() <= SSID_MAX_LENGTH) {
+    const char *ssid = ssidAsString.c_str();
+    char *matchingSSID = new char[SSID_MAX_LENGTH];
+    const char *pass = passAsString.c_str();
+
+    if(findNetwork(ssid, matchingSSID, false, true, 2)) {
+      ssid = matchingSSID;
+    }
+
+    if(wifiMulti.addAP(ssid, pass)) {
+      if(save) credentials.add(ssid, pass);
+      success = true;
+    }
+    delete matchingSSID;
   }
 
   return(success);
@@ -376,7 +350,13 @@ void YoYoWiFiManager::getCredentials(AsyncWebServerRequest *request) {
 }
 
 void YoYoWiFiManager::setCredentials(AsyncWebServerRequest *request, JsonVariant json) {
-  request->send(200);
+  request->send(setCredentials(json) ? 200 : 400);
+}
+
+bool YoYoWiFiManager::setCredentials(JsonVariant json) {
+  serializeJson(json, Serial);
+
+  return(false);
 }
 
 void YoYoWiFiManager::getPeers(AsyncWebServerRequest * request) {
