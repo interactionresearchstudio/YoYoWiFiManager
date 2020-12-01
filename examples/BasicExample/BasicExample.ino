@@ -10,7 +10,7 @@ void setup() {
   Serial.begin(115200);
 
   wifiManager.init(onYoYoCommandGET, onYoYoCommandPOST);
-  wifiManager.begin("YoYoMachines", "blinkblink", false);
+  wifiManager.begin("YoYoMachines", "blinkblink", true);
 }
 
 /*
