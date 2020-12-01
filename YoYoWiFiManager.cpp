@@ -173,7 +173,7 @@ bool YoYoWiFiManager::findNetwork(char const *ssid, char *matchingSSID, bool aut
 uint8_t YoYoWiFiManager::update() {
   dnsServer.processNextRequest();
 
-  uint8_t wlStatus = wifiMulti.run();
+  uint8_t wlStatus = (currentMode == YY_MODE_CLIENT) ? wifiMulti.run() : WiFi.status();
   yy_status_t yyStatus = YY_IDLE_STATUS;
   if(wlStatus == WL_CONNECTED) {
     switch(currentMode) {
@@ -446,9 +446,7 @@ String YoYoWiFiManager::getNetworksAsJsonString() {
 void YoYoWiFiManager::getNetworksAsJson(JsonDocument& jsonDoc) {
   JsonArray networks = jsonDoc.createNestedArray();
 
-  Serial.printf("WIFI STATUS: %i\n", update());
   int n = WiFi.scanNetworks();
-  Serial.printf("getNetworksAsJson  %i\n", n);
   n = (n > MAX_NETWORKS_TO_SCAN) ? MAX_NETWORKS_TO_SCAN : n;
 
   //Array is ordered by signal strength - strongest first
