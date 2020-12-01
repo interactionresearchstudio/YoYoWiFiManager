@@ -69,7 +69,7 @@ class YoYoWiFiManager : public AsyncWebHandler {
     void startWebServer();
 
     void addKnownNetworks();
-    bool addNetwork(String ssid, String pass, bool save = true);
+    bool addNetwork(char const *ssid, char const *password, bool save = true);
 
     String getNetworksAsJsonString();
     void getNetworksAsJson(JsonDocument& jsonDoc);

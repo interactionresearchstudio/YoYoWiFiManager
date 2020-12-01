@@ -104,20 +104,20 @@ void YoYoWiFiManager::addKnownNetworks() {
   }
 }
 
-bool YoYoWiFiManager::addNetwork(String ssidAsString, String passAsString, bool save) {
+bool YoYoWiFiManager::addNetwork(char const *ssid, char const *password, bool save) {
   bool success = false;
 
-  if(ssidAsString.length() > 0 && ssidAsString.length() <= SSID_MAX_LENGTH) {
-    const char *ssid = ssidAsString.c_str();
+  Serial.printf("addNetwork %s %s\n", ssid, password);
+
+  if(strlen(ssid) > 0 && strlen(ssid) <= SSID_MAX_LENGTH) {
     char *matchingSSID = new char[SSID_MAX_LENGTH];
-    const char *pass = passAsString.c_str();
 
     if(findNetwork(ssid, matchingSSID, false, true, 2)) {
       ssid = matchingSSID;
     }
 
-    if(wifiMulti.addAP(ssid, pass)) {
-      if(save) credentials.add(ssid, pass);
+    if(wifiMulti.addAP(ssid, password)) {
+      if(save) credentials.add(ssid, password);
       success = true;
     }
     delete matchingSSID;
@@ -346,6 +346,8 @@ void YoYoWiFiManager::onYoYoCommandPOST(AsyncWebServerRequest *request, JsonVari
 }
 
 void YoYoWiFiManager::getCredentials(AsyncWebServerRequest *request) {
+  //TODO: get all the credentials and turn them into json
+
   request->send(200);
 }
 
@@ -354,9 +356,18 @@ void YoYoWiFiManager::setCredentials(AsyncWebServerRequest *request, JsonVariant
 }
 
 bool YoYoWiFiManager::setCredentials(JsonVariant json) {
-  serializeJson(json, Serial);
+  bool success = false;
+  //serializeJson(json, Serial);
 
-  return(false);
+  const char* ssid = json["ssid"];
+  const char* password = json["password"];
+
+  if(ssid && password) {
+    addNetwork(ssid, password);
+    success = true;
+  }
+
+  return(success);
 }
 
 void YoYoWiFiManager::getPeers(AsyncWebServerRequest * request) {
