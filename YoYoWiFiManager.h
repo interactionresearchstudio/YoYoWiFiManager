@@ -83,6 +83,9 @@ class YoYoWiFiManager : public AsyncWebHandler {
     int updatePeerList();
     bool getPeerN(int n, char *ipAddress, char *macAddress, bool unchecked = false);
 
+    void getCredentials(AsyncWebServerRequest *request);
+    void setCredentials(AsyncWebServerRequest *request, JsonVariant json);
+
     wifi_sta_list_t wifi_sta_list;
     tcpip_adapter_sta_list_t adapter_sta_list;
 

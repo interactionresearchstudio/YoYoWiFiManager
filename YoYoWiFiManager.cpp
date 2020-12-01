@@ -250,6 +250,7 @@ void YoYoWiFiManager::handleRequest(AsyncWebServerRequest *request) {
     if(request->url().startsWith("/yoyo")) {
       if (request->url() == "/yoyo/networks")    getNetworks(request);
       else if (request->url() == "/yoyo/peers")  getPeers(request);
+      else if (request->url() == "/yoyo/credentials")  getCredentials(request);
       else onYoYoCommandGET(request);
     }
     else if (SPIFFS.exists(request->url())) {
@@ -274,8 +275,10 @@ void YoYoWiFiManager::handleRequest(AsyncWebServerRequest *request) {
     }
   }
   else if (request->method() == HTTP_POST) {
+    request->send(400); //POSTS are expected to have a body and then be processes by handleBody()
   }
   else {
+    request->send(400);
   }
 }
 
@@ -294,7 +297,10 @@ void YoYoWiFiManager::handleBody(AsyncWebServerRequest * request, uint8_t *data,
 
       StaticJsonDocument<1024> jsonDoc;
       if (!deserializeJson(jsonDoc, json)) {
-        onYoYoCommandPOST(request, jsonDoc.as<JsonVariant>());
+        if (request->url() == "/yoyo/credentials")  setCredentials(request, jsonDoc.as<JsonVariant>());
+        else {
+          onYoYoCommandPOST(request, jsonDoc.as<JsonVariant>());
+        }
       }
     }
     else {
@@ -363,6 +369,14 @@ void YoYoWiFiManager::onYoYoCommandPOST(AsyncWebServerRequest *request, JsonVari
   }
 
   request->send(success ? 200 : 404);
+}
+
+void YoYoWiFiManager::getCredentials(AsyncWebServerRequest *request) {
+  request->send(200);
+}
+
+void YoYoWiFiManager::setCredentials(AsyncWebServerRequest *request, JsonVariant json) {
+  request->send(200);
 }
 
 void YoYoWiFiManager::getPeers(AsyncWebServerRequest * request) {
