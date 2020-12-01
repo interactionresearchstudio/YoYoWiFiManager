@@ -275,7 +275,7 @@ void YoYoWiFiManager::handleRequest(AsyncWebServerRequest *request) {
     }
   }
   else if (request->method() == HTTP_POST) {
-    request->send(400); //POSTS are expected to have a body and then be processes by handleBody()
+    request->send(400); //POSTs are expected to have a body and then be processes by handleBody()
   }
   else {
     request->send(400);
@@ -286,9 +286,8 @@ void YoYoWiFiManager::handleBody(AsyncWebServerRequest * request, uint8_t *data,
   Serial.print("handleBody: ");
   Serial.println(request->url());
 
-  //TODO: if the POST has no payload this function will not get called and the request will time out without an error response to client - does it go to handleRequest()?
-
   if (request->method() == HTTP_GET) {
+    request->send(400); //GETs are expected to have no body and then be processes by handleRequest()
   }
   else if (request->method() == HTTP_POST) {
     if(request->url().startsWith("/yoyo")) {
@@ -308,6 +307,7 @@ void YoYoWiFiManager::handleBody(AsyncWebServerRequest * request, uint8_t *data,
     }
   }
   else {
+    request->send(400);
   }
 }
 
