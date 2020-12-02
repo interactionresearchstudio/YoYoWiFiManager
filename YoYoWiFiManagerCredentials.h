@@ -1,6 +1,7 @@
 #ifndef YoYoWiFiManagerCredentials_h
 #define YoYoWiFiManagerCredentials_h
 
+//#include <nvs_flash.h>
 #include <Preferences.h>
 
 #define YoYoWiFiManagerCredentialsNameSpace "YoYoCred"
@@ -16,6 +17,7 @@ class YoYoWiFiManagerCredentials {
                 credentialsAsList[n] = NULL;
             }
 
+            //nvs_flash_init();
             loadCredentials();
         }
 
