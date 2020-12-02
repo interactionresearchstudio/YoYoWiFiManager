@@ -342,7 +342,41 @@ void YoYoWiFiManager::onYoYoCommandPOST(AsyncWebServerRequest *request, JsonVari
     success = yoYoCommandPostHandler(request->url(), json);
   }
 
+  if(currentMode == YY_MODE_PEER_SERVER) {
+    int peerCount = updatePeerList();
+
+    char *ipAddress = new char[17];
+    for (int i = 0; i < peerCount; i++) {
+      getPeerN(i, ipAddress, NULL, true);
+      Serial.printf("POST to: %s\n", ipAddress);
+      makePOST(ipAddress, request->url().c_str(), json);
+    }
+    delete ipAddress;
+  }
+
   request->send(success ? 200 : 404);
+}
+
+void YoYoWiFiManager::makePOST(const char *server, const char *path, JsonVariant json) {
+  String s;
+  serializeJson(json, s);
+
+  Serial.printf("http://%s%s > %s\n", server, path, json);
+
+  /*
+  // Serialize JSON document
+  
+
+  HTTPClient http;
+
+  http.begin("http://httpbin.org/post");
+  http.POST(json);
+
+  // Read response
+  //Serial.print(http.getString());
+
+  http.end();
+  */
 }
 
 void YoYoWiFiManager::getCredentials(AsyncWebServerRequest *request) {
@@ -422,8 +456,8 @@ bool YoYoWiFiManager::getPeerN(int n, char *ipAddress, char *macAddress, bool un
   if(unchecked || (n >=0 && n < updatePeerList())) {
     tcpip_adapter_sta_info_t station = adapter_sta_list.sta[n];
 
-    strcpy(ipAddress, ip4addr_ntoa(&(station.ip)));
-    mac_addr_to_c_str(station.mac, macAddress);
+    if(ipAddress != NULL)   strcpy(ipAddress, ip4addr_ntoa(&(station.ip)));
+    if(macAddress != NULL)  mac_addr_to_c_str(station.mac, macAddress);
 
     success = true;
   }
@@ -466,10 +500,37 @@ void YoYoWiFiManager::getNetworksAsJson(JsonDocument& jsonDoc) {
   }
 }
 
+bool YoYoWiFiManager::isEspressif(char *macAddress) {
+  bool result = false;
+
+  int oui = getOUI(macAddress);
+  int count = sizeof(ESPRESSIF_OUI);
+
+  for(int n=0; n < count && !result; ++n) {
+    result = (oui == ESPRESSIF_OUI[n]);
+  }
+
+  return(result);
+}
+
 bool YoYoWiFiManager::mac_addr_to_c_str(uint8_t *mac, char *str) {
   bool success = true;
 
   sprintf(str, "%02X:%02X:%02X:%02X:%02X:%02X\0", mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
 
   return(success);
+}
+
+int YoYoWiFiManager::getOUI(char *mac) {
+  int oui = 0;
+
+  //basic format test ##.##.##.##.##.##
+  if(strlen(mac) == 17) {
+    int a, b, c, d, e, f;
+    sscanf(mac, "%x:%x:%x:%x:%x:%x", &a, &b, &c, &d, &e, &f);
+    
+    oui = (a << 16) & 0xff0000 | (b << 8) & 0x00ff00 | c & 0x0000ff;
+  }
+
+  return(oui);
 }

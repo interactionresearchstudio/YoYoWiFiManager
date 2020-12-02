@@ -18,6 +18,7 @@
 #include "YoYoWiFiManagerCredentials.h"
 
 #include "Levenshtein.h"
+#include "Espressif.h"
 
 #define SSID_MAX_LENGTH 31
 #define WIFICONNECTTIMEOUT 60000
@@ -87,6 +88,8 @@ class YoYoWiFiManager : public AsyncWebHandler {
     wifi_sta_list_t wifi_sta_list;
     tcpip_adapter_sta_list_t adapter_sta_list;
 
+    void makePOST(const char *server, const char *path, JsonVariant json);
+
   public:
     YoYoWiFiManager();
 
@@ -116,8 +119,11 @@ class YoYoWiFiManager : public AsyncWebHandler {
     void setCredentials(AsyncWebServerRequest *request, JsonVariant json);
     bool setCredentials(JsonVariant json);
 
+    bool isEspressif(char *macAddress);
+    
   private:
     bool mac_addr_to_c_str(uint8_t *mac, char *str);
+    int getOUI(char *mac);
 };
 
 #endif
