@@ -51,6 +51,9 @@ class YoYoWiFiManager : public AsyncWebHandler {
 
   private:
     WiFiMulti wifiMulti;
+
+    char peerNetworkSSID[SSID_MAX_LENGTH + 1];
+    char peerNetworkPassword[64];
     
     yy_status_t currentStatus = YY_IDLE_STATUS;
     void onStatusChanged();
@@ -59,6 +62,8 @@ class YoYoWiFiManager : public AsyncWebHandler {
     DNSServer dnsServer;
     IPAddress apIP = IPAddress(192, 168, 4, 1);
     AsyncWebServer webserver = AsyncWebServer(80);
+
+    long clientTimeOutAtMs = -1;
 
     YoYoWiFiManagerCredentials credentials;
     uint8_t wifiLEDPin;
@@ -69,15 +74,18 @@ class YoYoWiFiManager : public AsyncWebHandler {
 
     void startWebServer();
 
+    yy_mode_t updateMode();
+    uint8_t updateStatus();
+
     void addKnownNetworks();
     bool addNetwork(char const *ssid, char const *password, bool save = true);
 
     String getNetworksAsJsonString();
     void getNetworksAsJson(JsonDocument& jsonDoc);
 
-    yy_mode_t createPeerNetwork(char const *apName, char const *apPassword);
-    bool joinPeerNetworkAsClient(char const *apName, char const *apPassword);
-    void joinPeerNetworkAsServer(char const *apName, char const *apPassword);
+    yy_mode_t createPeerNetwork();
+    bool joinPeerNetworkAsClient();
+    void joinPeerNetworkAsServer();
 
     String getPeersAsJsonString();
     void getPeersAsJson(JsonDocument& jsonDoc);
@@ -90,11 +98,14 @@ class YoYoWiFiManager : public AsyncWebHandler {
 
     void makePOST(const char *server, const char *path, JsonVariant json);
 
+    bool setMode(yy_mode_t mode);
+
   public:
     YoYoWiFiManager();
 
     void init(callbackPtr getHandler = NULL, callbackPtr postHandler = NULL, uint8_t wifiLEDPin = 2);
     boolean begin(char const *apName, char const *apPassword = NULL, bool autoconnect = false);
+    void setPeerNetworkCredentials(char *ssid, char *password);
 
     void blinkWiFiLED(int count);
 

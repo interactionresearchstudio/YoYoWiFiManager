@@ -13,47 +13,57 @@ void YoYoWiFiManager::init(callbackPtr getHandler, callbackPtr postHandler, uint
   memset(&adapter_sta_list, 0, sizeof(adapter_sta_list));
 
   SPIFFS.begin();
+
+  peerNetworkSSID[0] = NULL;
+  peerNetworkPassword[0] = NULL;
 }
 
 boolean YoYoWiFiManager::begin(char const *apName, char const *apPassword, bool autoconnect) {
+  setPeerNetworkCredentials((char *)apName, (char *)apPassword);
+
   if(autoconnect && credentials.available()) {
     //TODO: attempt to connect using credentials:
 
     Serial.println("credentials available");
-    currentMode = YY_MODE_CLIENT;
+    setMode(YY_MODE_CLIENT);
     addKnownNetworks();
   }
   else {
-    currentMode = createPeerNetwork(apName, apPassword);
+    setMode(createPeerNetwork());
   }
 
   return(true);
 }
 
-YoYoWiFiManager::yy_mode_t YoYoWiFiManager::createPeerNetwork(char const *apName, char const *apPassword) {
-  yy_mode_t mode = YY_MODE_NONE;
+void YoYoWiFiManager::setPeerNetworkCredentials(char *ssid, char *password) {
+  if(ssid != NULL) strcpy(peerNetworkSSID, ssid);
+  if(password != NULL) strcpy(peerNetworkPassword, password);
+}
+
+YoYoWiFiManager::yy_mode_t YoYoWiFiManager::createPeerNetwork() {
+  yy_mode_t mode = currentMode;
   
-  if(joinPeerNetworkAsClient(apName, apPassword)) {
-    currentMode = YY_MODE_PEER_CLIENT;
+  if(joinPeerNetworkAsClient()) {
+    mode = YY_MODE_PEER_CLIENT;
   }
   else {
-    currentMode = YY_MODE_PEER_SERVER;
-    joinPeerNetworkAsServer(apName, apPassword);
+    mode = YY_MODE_PEER_SERVER;
+    joinPeerNetworkAsServer();
   }
 
   return(mode);
 }
 
 // Scan and connect to peer wifi network. Returns true if joined.
-boolean YoYoWiFiManager::joinPeerNetworkAsClient(char const *apName, char const *apPassword) {
+boolean YoYoWiFiManager::joinPeerNetworkAsClient() {
   boolean joinedPeerNetwork = false;
 
   char foundNetwork[SSID_MAX_LENGTH * 2];
-  if(findNetwork(apName, foundNetwork, true)) {
+  if(findNetwork(peerNetworkSSID, foundNetwork, true)) {
     Serial.printf("Found peer network: %s\n", foundNetwork);
 
     //TODO: should this really use wifiMulti?
-    addNetwork(foundNetwork, apPassword, false);
+    addNetwork(foundNetwork, peerNetworkPassword, false);
     while ((wifiMulti.run() != WL_CONNECTED)) {
       delay(500);
       Serial.print(".");
@@ -71,16 +81,16 @@ boolean YoYoWiFiManager::joinPeerNetworkAsClient(char const *apName, char const 
 }
 
 // Creates Access Point for other device to connect to
-void YoYoWiFiManager::joinPeerNetworkAsServer(char const *apName, char const *apPassword) {
+void YoYoWiFiManager::joinPeerNetworkAsServer() {
   Serial.print("Wifi name:");
-  Serial.println(apName);
+  Serial.println(peerNetworkSSID);
 
   WiFi.mode(WIFI_AP);
   delay(2000);
 
   WiFi.persistent(false);
   WiFi.softAPConfig(apIP, apIP, IPAddress(255, 255, 255, 0));
-  WiFi.softAP(apName, apPassword);
+  WiFi.softAP(peerNetworkSSID, peerNetworkPassword);
   IPAddress myIP = WiFi.softAPIP();
   Serial.println(myIP);
 
@@ -147,6 +157,55 @@ bool YoYoWiFiManager::findNetwork(char const *ssid, char *matchingSSID, bool aut
 uint8_t YoYoWiFiManager::update() {
   dnsServer.processNextRequest();
 
+  updateMode();
+  updateStatus();
+  digitalWrite(wifiLEDPin, currentStatus != YY_CONNECTED);
+
+  return(currentStatus); 
+}
+
+YoYoWiFiManager::yy_mode_t YoYoWiFiManager::updateMode() {
+  switch(currentMode) {
+    case YY_MODE_NONE:
+      break;
+    case YY_MODE_CLIENT:
+      if(millis() > clientTimeOutAtMs) setMode(createPeerNetwork());
+      break;
+    case YY_MODE_PEER_CLIENT:
+      break;
+    case YY_MODE_PEER_SERVER:
+      break;
+  }
+
+  return(currentMode);
+}
+
+bool YoYoWiFiManager::setMode(yy_mode_t mode) {
+  bool result = true;
+
+  if(mode != currentMode) {
+    switch(mode) {
+      case YY_MODE_NONE:
+        Serial.println("YY_MODE_NONE");
+        break;
+      case YY_MODE_CLIENT:
+        Serial.println("YY_MODE_CLIENT");
+        clientTimeOutAtMs = millis() + WIFICONNECTTIMEOUT;
+        break;
+      case YY_MODE_PEER_CLIENT: 
+        Serial.println("YY_MODE_PEER_CLIENT");
+        break;
+      case YY_MODE_PEER_SERVER:
+        Serial.println("YY_MODE_PEER_SERVER");
+        break;
+    }
+    currentMode = mode;
+  }
+
+  return(result);
+}
+
+uint8_t YoYoWiFiManager::updateStatus() {
   uint8_t wlStatus = (currentMode == YY_MODE_CLIENT) ? wifiMulti.run() : WiFi.status();
   yy_status_t yyStatus = YY_IDLE_STATUS;
   if(wlStatus == WL_CONNECTED) {
@@ -162,8 +221,6 @@ uint8_t YoYoWiFiManager::update() {
     currentStatus = yyStatus;
     onStatusChanged();
   }
-
-  digitalWrite(wifiLEDPin, currentStatus != YY_CONNECTED);
 
   return(currentStatus); 
 }
@@ -446,6 +503,22 @@ int YoYoWiFiManager::updatePeerList() {
   esp_wifi_ap_get_sta_list(&wifi_sta_list);
   tcpip_adapter_get_sta_list(&wifi_sta_list, &adapter_sta_list);
   count = adapter_sta_list.num;
+
+  return(count);
+}
+
+int YoYoWiFiManager::countPeers() {
+  int count = 0;
+
+  return(count);
+}
+
+int YoYoWiFiManager::countClients() {
+  int count = 0;
+
+  if(currentMode == YY_MODE_PEER_SERVER) {
+    count = updatePeerList();
+  }
 
   return(count);
 }
