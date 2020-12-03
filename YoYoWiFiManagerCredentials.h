@@ -1,8 +1,11 @@
 #ifndef YoYoWiFiManagerCredentials_h
 #define YoYoWiFiManagerCredentials_h
 
-//#include <nvs_flash.h>
-#include <Preferences.h>
+#if defined(ESP8266)
+#elif defined(ESP32)
+    //#include <nvs_flash.h>
+    #include <Preferences.h>
+#endif
 
 #define YoYoWiFiManagerCredentialsNameSpace "YoYoCred"
 #define YoYoWiFiManagerCredentialsListMax 8

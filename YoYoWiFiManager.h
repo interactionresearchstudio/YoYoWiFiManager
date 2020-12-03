@@ -5,18 +5,22 @@
 
 #include <ArduinoJson.h>
 #include <DNSServer.h>
-#include <HTTPClient.h>
-#include <HTTPUpdate.h>
-#include <WiFiMulti.h>
 
-#include "esp_wifi.h"
-
-#include <AsyncTCP.h>
-#include <ESPAsyncWebServer.h>
-#include "SPIFFS.h"
+#if defined(ESP8266)
+  #include <ESP8266WiFiMulti.h>
+  //#include <ESPAsyncTCP.h>
+  #include "FS.h"
+#elif defined(ESP32)
+  #include <HTTPClient.h>
+  #include <HTTPUpdate.h>
+  #include <WiFiMulti.h>
+  #include "esp_wifi.h"
+  #include <AsyncTCP.h>
+  #include "SPIFFS.h"
+  #include <ESPAsyncWebServer.h>
+#endif
 
 #include "YoYoWiFiManagerCredentials.h"
-
 #include "Levenshtein.h"
 #include "Espressif.h"
 
@@ -50,7 +54,11 @@ class YoYoWiFiManager : public AsyncWebHandler {
   } yy_status_t;
 
   private:
-    WiFiMulti wifiMulti;
+    #if defined(ESP8266)
+      ESP8266WiFiMulti wifiMulti;
+    #elif defined(ESP32)
+      WiFiMulti wifiMulti;
+    #endif
 
     char peerNetworkSSID[SSID_MAX_LENGTH + 1];
     char peerNetworkPassword[64];
