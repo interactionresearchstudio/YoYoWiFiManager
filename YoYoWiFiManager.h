@@ -23,6 +23,7 @@
 #include "YoYoWiFiManagerCredentials.h"
 #include "Levenshtein.h"
 #include "Espressif.h"
+#include "index_html.h"
 
 #define SSID_MAX_LENGTH 31
 #define WIFICONNECTTIMEOUT 60000

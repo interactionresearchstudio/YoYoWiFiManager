@@ -359,8 +359,7 @@ void YoYoWiFiManager::sendIndexFile(AsyncWebServerRequest * request) {
     sendFile(request, path);
   }
   else {
-    //TODO: return default HTML - probably from an .h file
-    request->send(404);
+    request->send(200, "text/html", DEFAULT_INDEX_HTML);
   }
 }
 
