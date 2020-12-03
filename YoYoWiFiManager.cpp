@@ -12,7 +12,7 @@ void YoYoWiFiManager::init(callbackPtr getHandler, callbackPtr postHandler, uint
   memset(&wifi_sta_list, 0, sizeof(wifi_sta_list));
   memset(&adapter_sta_list, 0, sizeof(adapter_sta_list));
 
-  SPIFFS.begin();
+  SPIFFS_ENABLED = SPIFFS.begin();
 
   peerNetworkSSID[0] = NULL;
   peerNetworkPassword[0] = NULL;
@@ -284,14 +284,14 @@ void YoYoWiFiManager::handleRequest(AsyncWebServerRequest *request) {
       else if (request->url() == "/yoyo/credentials")  getCredentials(request);
       else onYoYoCommandGET(request);
     }
-    else if (SPIFFS.exists(request->url())) {
+    else if (SPIFFS_ENABLED && SPIFFS.exists(request->url())) {
       sendFile(request, request->url());
     }
     else if (request->url().endsWith(".html") || 
               request->url().endsWith("/") ||
               request->url().endsWith("generate_204") ||
               request->url().endsWith("redirect"))  {
-      sendFile(request, "/index.html");
+      sendIndexFile(request);
     }
     else if (request->url().endsWith("connecttest.txt") || 
               request->url().endsWith("ncsi.txt")) {
@@ -299,7 +299,7 @@ void YoYoWiFiManager::handleRequest(AsyncWebServerRequest *request) {
     }
     else if (strstr(request->url().c_str(), "generate_204_") != NULL) {
       Serial.println("you must be huawei!");
-      sendFile(request, "/index.html");
+      sendIndexFile(request);
     }
     else {
       request->send(304);
@@ -345,10 +345,21 @@ void YoYoWiFiManager::handleBody(AsyncWebServerRequest * request, uint8_t *data,
 void YoYoWiFiManager::sendFile(AsyncWebServerRequest * request, String path) {
   Serial.println("handleFileRead: " + path);
 
-  if (SPIFFS.exists(path)) {
+  if (SPIFFS_ENABLED && SPIFFS.exists(path)) {
     request->send(SPIFFS, path, getContentType(path));
   }
   else {
+    request->send(404);
+  }
+}
+
+void YoYoWiFiManager::sendIndexFile(AsyncWebServerRequest * request) {
+  String path = "/index.html";
+  if (SPIFFS_ENABLED && SPIFFS.exists(path)) {
+    sendFile(request, path);
+  }
+  else {
+    //TODO: return default HTML - probably from an .h file
     request->send(404);
   }
 }

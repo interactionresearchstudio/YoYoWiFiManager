@@ -76,6 +76,8 @@ class YoYoWiFiManager : public AsyncWebHandler {
     YoYoWiFiManagerCredentials credentials;
     uint8_t wifiLEDPin;
 
+    bool SPIFFS_ENABLED = false;
+
     typedef bool (*callbackPtr)(const String&, JsonVariant);
     callbackPtr yoYoCommandGetHandler = NULL;
     callbackPtr yoYoCommandPostHandler = NULL;
@@ -126,6 +128,7 @@ class YoYoWiFiManager : public AsyncWebHandler {
     void handleRequest(AsyncWebServerRequest *request);
     void handleBody(AsyncWebServerRequest * request, uint8_t *data, size_t len, size_t index, size_t total);
     void sendFile(AsyncWebServerRequest * request, String path);
+    void sendIndexFile(AsyncWebServerRequest * request);
     String getContentType(String filename);
 
     void onYoYoCommandGET(AsyncWebServerRequest *request);
