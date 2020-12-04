@@ -4,10 +4,15 @@ YoYoWiFiManager::YoYoWiFiManager() {
 }
 
 void YoYoWiFiManager::init(callbackPtr getHandler, callbackPtr postHandler, uint8_t wifiLEDPin) {
+  #if defined(ESP32)
+    nvs_flash_init(); //TODO: this is ugly and DOESN'T WORK > https://github.com/espressif/arduino-esp32/issues/3421
+  #endif
+
   this -> yoYoCommandGetHandler = getHandler;
   this -> yoYoCommandPostHandler = postHandler;
 
   this -> wifiLEDPin = wifiLEDPin;
+  pinMode(wifiLEDPin, OUTPUT);
 
   memset(&wifi_sta_list, 0, sizeof(wifi_sta_list));
   memset(&adapter_sta_list, 0, sizeof(adapter_sta_list));
@@ -22,17 +27,20 @@ boolean YoYoWiFiManager::begin(char const *apName, char const *apPassword, bool 
   setPeerNetworkCredentials((char *)apName, (char *)apPassword);
 
   if(autoconnect && credentials.available()) {
-    //TODO: attempt to connect using credentials:
-
     Serial.println("credentials available");
-    setMode(YY_MODE_CLIENT);
     addKnownNetworks();
+    setMode(YY_MODE_CLIENT);
   }
   else {
     setMode(createPeerNetwork());
   }
 
   return(true);
+}
+
+void YoYoWiFiManager::connect() {
+  //Once in YY_MODE_CLIENT mode - updateStatus() via update() will trigger wifiMulti.run()
+  setMode(YY_MODE_CLIENT);
 }
 
 void YoYoWiFiManager::setPeerNetworkCredentials(char *ssid, char *password) {
@@ -117,8 +125,6 @@ void YoYoWiFiManager::addKnownNetworks() {
 bool YoYoWiFiManager::addNetwork(char const *ssid, char const *password, bool save) {
   bool success = false;
 
-  Serial.printf("addNetwork %s %s\n", ssid, password);
-
   if(strlen(ssid) > 0 && strlen(ssid) <= SSID_MAX_LENGTH) {
     char *matchingSSID = new char[SSID_MAX_LENGTH];
 
@@ -169,7 +175,7 @@ YoYoWiFiManager::yy_mode_t YoYoWiFiManager::updateMode() {
     case YY_MODE_NONE:
       break;
     case YY_MODE_CLIENT:
-      if(millis() > clientTimeOutAtMs) setMode(createPeerNetwork());
+      if(currentStatus != YY_CONNECTED && millis() > clientTimeOutAtMs) setMode(createPeerNetwork());
       break;
     case YY_MODE_PEER_CLIENT:
       break;
@@ -184,6 +190,10 @@ bool YoYoWiFiManager::setMode(yy_mode_t mode) {
   bool result = true;
 
   if(mode != currentMode) {
+    if(currentMode == YY_MODE_PEER_SERVER) {
+      WiFi.softAPdisconnect(true);
+    }
+
     switch(mode) {
       case YY_MODE_NONE:
         Serial.println("YY_MODE_NONE");
@@ -458,7 +468,6 @@ void YoYoWiFiManager::setCredentials(AsyncWebServerRequest *request, JsonVariant
 
 bool YoYoWiFiManager::setCredentials(JsonVariant json) {
   bool success = false;
-  //serializeJson(json, Serial);
 
   const char* ssid = json["ssid"];
   const char* password = json["password"];

@@ -18,6 +18,7 @@
   #include <AsyncTCP.h>
   #include "SPIFFS.h"
   #include <ESPAsyncWebServer.h>
+  #include <nvs_flash.h>
 #endif
 
 #include "YoYoWiFiManagerCredentials.h"
@@ -117,6 +118,7 @@ class YoYoWiFiManager : public AsyncWebHandler {
     void init(callbackPtr getHandler = NULL, callbackPtr postHandler = NULL, uint8_t wifiLEDPin = 2);
     boolean begin(char const *apName, char const *apPassword = NULL, bool autoconnect = false);
     void setPeerNetworkCredentials(char *ssid, char *password);
+    void connect();
 
     void blinkWiFiLED(int count);
 
