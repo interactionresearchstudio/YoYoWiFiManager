@@ -3,7 +3,6 @@
 
 #if defined(ESP8266)
 #elif defined(ESP32)
-    //#include <nvs_flash.h>
     #include <Preferences.h>
 #endif
 
@@ -19,8 +18,7 @@ class YoYoWiFiManagerCredentials {
             for(int n=0; n < YoYoWiFiManagerCredentialsListMax; ++n) {
                 credentialsAsList[n] = NULL;
             }
-
-            //nvs_flash_init();
+            
             loadCredentials();
         }
 
