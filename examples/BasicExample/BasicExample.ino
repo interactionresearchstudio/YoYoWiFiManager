@@ -57,10 +57,11 @@ bool onYoYoCommandPOST(const String &url, JsonVariant json) {
   
   //read this json object and do something
   Serial.println("onYoYoCommandPOST " + url);
+  serializeJson(json, Serial);
 
   if(url.equals("/yoyo/settings")) {
-    success = true;
-    serializeJson(json, Serial);
+    success = wifiManager.setCredentials(json);
+    if(success) wifiManager.connect();
   }
 
   return(success);
