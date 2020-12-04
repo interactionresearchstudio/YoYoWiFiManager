@@ -200,7 +200,7 @@ bool YoYoWiFiManager::setMode(yy_mode_t mode) {
         break;
       case YY_MODE_CLIENT:
         Serial.println("YY_MODE_CLIENT");
-        clientTimeOutAtMs = millis() + WIFICONNECTTIMEOUT;
+        updateClientTimeOut();
         break;
       case YY_MODE_PEER_CLIENT: 
         Serial.println("YY_MODE_PEER_CLIENT");
@@ -232,7 +232,15 @@ uint8_t YoYoWiFiManager::updateStatus() {
     onStatusChanged();
   }
 
+  switch(currentStatus) {
+    case YY_CONNECTED:  updateClientTimeOut(); break;
+  }
+
   return(currentStatus); 
+}
+
+void YoYoWiFiManager::updateClientTimeOut() {
+  clientTimeOutAtMs = millis() + WIFICONNECTTIMEOUT;
 }
 
 void YoYoWiFiManager::onStatusChanged() {

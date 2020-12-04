@@ -111,6 +111,7 @@ class YoYoWiFiManager : public AsyncWebHandler {
     void makePOST(const char *server, const char *path, JsonVariant json);
 
     bool setMode(yy_mode_t mode);
+    void updateClientTimeOut();
 
   public:
     YoYoWiFiManager();
