@@ -45,7 +45,7 @@ function populateNetworksList(selectedNetwork) {
 
         if($('#networks-list-select option').length > 0) {
             $('#networks-list-select').attr('disabled', false);
-            $('#local_pass').attr('disabled', false);
+            $('#password').attr('disabled', false);
         }
         else {
             networks.append('<option>No Networks Found</option>');
@@ -57,7 +57,7 @@ function onSaveButtonClicked(event) {
     event.preventDefault();
 
     var data = {
-        local_ssid: $('#networks-list-select').children("option:selected").val(),
+        ssid: $('#networks-list-select').children("option:selected").val(),
         password: $('#password').val()
     };
 
