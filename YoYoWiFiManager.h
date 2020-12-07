@@ -75,7 +75,7 @@ class YoYoWiFiManager : public AsyncWebHandler {
 
     long clientTimeOutAtMs = -1;
 
-    YoYoWiFiManagerSetings credentials;
+    YoYoWiFiManagerSetings *settingsJson = NULL;
     uint8_t wifiLEDPin;
 
     bool SPIFFS_ENABLED = false;

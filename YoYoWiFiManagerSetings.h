@@ -1,103 +1,73 @@
 #ifndef YoYoWiFiManagerSetings_h
 #define YoYoWiFiManagerSetings_h
 
+#include <ArduinoJson.h>
 #include <EEPROM.h>
+#include <StreamUtils.h>
 
-#define YoYoWiFiManagerSetingsMaxListCount  8
-#define YoYoWiFiManagerSetingsAddress       0
-#define YoYoWiFiManagerSetingsSize          512
+// #define YoYoWiFiManagerSetingsAddress       0
+// #define YoYoWiFiManagerSetingsSize          EEPROM.length()
 
-class YoYoWiFiManagerSetings {
+// #define YoYoWiFiManagerSetingsMaxListCount  8
+//           512
+
+#if defined(ESP8266)
+    #define YY_MAX_EEPROM_CAPACITY_BYTES  512
+#elif defined(ESP32)
+    #define YY_MAX_EEPROM_CAPACITY_BYTES  512
+#endif
+
+class YoYoWiFiManagerSetings : public DynamicJsonDocument {
     private:
-        //Preferences credentials;
-        String *credentialsAsList[YoYoWiFiManagerSetingsMaxListCount];
+        int eepromAddress = 0;
+        int eepromCapacityBytes = 0;
 
-        void init() {
-            EEPROM.begin(YoYoWiFiManagerSetingsSize);
+        void init(int eepromCapacityBytes, int eepromAddress) {
+            this -> eepromAddress = eepromAddress;
+            this -> eepromCapacityBytes = min(YY_MAX_EEPROM_CAPACITY_BYTES - eepromAddress, eepromCapacityBytes);;
 
-            for(int n=0; n < YoYoWiFiManagerSetingsMaxListCount; ++n) {
-                credentialsAsList[n] = NULL;
-            }
-
-            loadCredentials();
-        }
-
-        size_t getString(const char* key, char* value, const size_t maxLen) {
-            size_t len = 0;
-            
-            //credentials.begin(YoYoWiFiManagerSetingsNameSpace);
-            //len = credentials.getString(key, value, maxLen);
-            //credentials.end();
-
-            return(len);
-        }
-
-        void putString(const char* key, String value) {
-            // credentials.begin(YoYoWiFiManagerSetingsNameSpace);
-            // credentials.putString(key, value);
-            // credentials.end();
-        }
-
-        void loadCredentials() {
-            Serial.println("loadCredentials");
-            char s[YoYoWiFiManagerSetingsSize];
-
-            EEPROM.get(YoYoWiFiManagerSetingsAddress, s);
-            if(strlen(s) > 0) {
-                const char d[2] = ":";
-
-                char *credentials;
-                credentials = strtok(s, d);
-                
-                Serial.printf("credentials %s\n", credentials);
-                int n = 0;
-                while(credentials != NULL) {
-                    credentialsAsList[n] = new String(credentials);
-                    
-                    credentials = strtok(NULL, d);
-                    ++n;
-                }
-            }
-        }
-
-        void saveCredentials() {
-            /*
-            String s;
-            for(int n=0; n < YoYoWiFiManagerSetingsListMaxLength; ++n) {
-                if(credentialsAsList[n] != NULL) {
-                    s+=*credentialsAsList[n];
-                    s+=":";
-                }
-            }
-            Serial.printf("saveCredentials: %s\n", s.c_str());
-            putString("credentials", s);
-            */
+            EEPROM.begin(this -> eepromCapacityBytes);
+            EepromStream eepromStream(this -> eepromAddress, this -> eepromCapacityBytes);
+            deserializeJson(*this, eepromStream);
         }
 
     public:
-        YoYoWiFiManagerSetings() {
+        YoYoWiFiManagerSetings(int capacityBytes, int address = 0) : DynamicJsonDocument(capacityBytes) {
             Serial.println("YoYoWiFiManagerSetings");
-            init();
+            init(capacityBytes, address);
         }
 
-        bool available() {
-            return(getQuantity() > 0);
+        bool hasNetworkCredentials() {
+            return(getNumberOfNetworkCredentials() > 0);
         }
 
-        void add(const char *ssid, const char *password) {
-            /*
-            int oldestN = YoYoWiFiManagerSetingsListMax-1;
-            if(credentialsAsList[oldestN] != NULL) delete credentialsAsList[oldestN];
+        int getNumberOfNetworkCredentials() {
+            int result = (*this)["credentials"].size();
 
-            for(int n = oldestN; n > 0; --n) {
-                credentialsAsList[n] = credentialsAsList[n-1];
-            }
-            credentialsAsList[0] = new String(String(ssid) + "," + String(password));   //TODO: double check seprator chars can be relied on;
-
-            saveCredentials();
-            */
+            return(result);
         }
 
+        void addNetwork(const char *ssid, const char *password) {
+            // int oldestN = YoYoWiFiManagerSetingsListMax-1;
+            // if(credentialsAsList[oldestN] != NULL) delete credentialsAsList[oldestN];
+
+            // for(int n = oldestN; n > 0; --n) {
+            //     credentialsAsList[n] = credentialsAsList[n-1];
+            // }
+            // credentialsAsList[0] = new String(String(ssid) + "," + String(password));   //TODO: double check seprator chars can be relied on;
+
+            // saveCredentials();
+        }
+
+        bool save() {
+            EepromStream eepromStream(this -> eepromAddress, this -> eepromCapacityBytes);
+            serializeJson(*this, eepromStream);
+            eepromStream.flush(); 
+
+            return(true);
+        }
+
+        /*
         String *get(int n) {
             String *result = NULL;
             
@@ -130,23 +100,12 @@ class YoYoWiFiManagerSetings {
             return(result);
         }
 
-        int getQuantity() {
-            int result = YoYoWiFiManagerSetingsMaxListCount;
-
-            // for(int n=0; n < YoYoWiFiManagerSetingsListMax && result == YoYoWiFiManagerSetingsListMax; ++n) {
-            //     if(credentialsAsList[n] == NULL) {
-            //         result = n;
-            //     }
-            // }
-
-            return(result);
-        }
-
         void clear() {
             for (int i = YoYoWiFiManagerSetingsAddress; i < YoYoWiFiManagerSetingsSize; i++) {
                 EEPROM.write(i, 0);
             }
         }
+        */
 };
 
 #endif

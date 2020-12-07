@@ -4,9 +4,7 @@ YoYoWiFiManager::YoYoWiFiManager() {
 }
 
 void YoYoWiFiManager::init(callbackPtr getHandler, callbackPtr postHandler, uint8_t wifiLEDPin) {
-  #if defined(ESP32)
-    nvs_flash_init(); //TODO: this is ugly and DOESN'T WORK > https://github.com/espressif/arduino-esp32/issues/3421
-  #endif
+  settingsJson = new YoYoWiFiManagerSetings(512);
 
   this -> yoYoCommandGetHandler = getHandler;
   this -> yoYoCommandPostHandler = postHandler;
@@ -26,8 +24,8 @@ void YoYoWiFiManager::init(callbackPtr getHandler, callbackPtr postHandler, uint
 boolean YoYoWiFiManager::begin(char const *apName, char const *apPassword, bool autoconnect) {
   setPeerNetworkCredentials((char *)apName, (char *)apPassword);
 
-  if(autoconnect && credentials.available()) {
-    Serial.println("credentials available");
+  if(autoconnect && settingsJson -> hasNetworkCredentials()) {
+    Serial.println("network credentials available");
     addKnownNetworks();
     setMode(YY_MODE_CLIENT);
   }
@@ -116,10 +114,12 @@ void YoYoWiFiManager::startWebServer() {
 }
 
 void YoYoWiFiManager::addKnownNetworks() {
+  /*
   int credentialsCount = credentials.getQuantity();
   for(int n = 0; n < credentialsCount; ++n) {
     addNetwork(credentials.getSSID(n) -> c_str(), credentials.getPassword(n) -> c_str(), false);
   }
+  */
 }
 
 bool YoYoWiFiManager::addNetwork(char const *ssid, char const *password, bool save) {
@@ -133,7 +133,7 @@ bool YoYoWiFiManager::addNetwork(char const *ssid, char const *password, bool sa
     }
 
     if(wifiMulti.addAP(ssid, password)) {
-      if(save) credentials.add(ssid, password);
+      //if(save) credentials.add(ssid, password);
       success = true;
     }
     delete matchingSSID;
@@ -161,6 +161,7 @@ bool YoYoWiFiManager::findNetwork(char const *ssid, char *matchingSSID, bool aut
 }
 
 uint8_t YoYoWiFiManager::update() {
+  /*
   dnsServer.processNextRequest();
 
   updateMode();
@@ -168,6 +169,7 @@ uint8_t YoYoWiFiManager::update() {
   digitalWrite(wifiLEDPin, currentStatus != YY_CONNECTED);
 
   return(currentStatus); 
+  */
 }
 
 YoYoWiFiManager::yy_mode_t YoYoWiFiManager::updateMode() {
