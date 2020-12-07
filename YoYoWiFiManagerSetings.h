@@ -1,46 +1,49 @@
-#ifndef YoYoWiFiManagerCredentials_h
-#define YoYoWiFiManagerCredentials_h
+#ifndef YoYoWiFiManagerSetings_h
+#define YoYoWiFiManagerSetings_h
 
-#if defined(ESP8266)
-#elif defined(ESP32)
-    #include <Preferences.h>
-#endif
+#include <EEPROM.h>
 
-#define YoYoWiFiManagerCredentialsNameSpace "YoYoCred"
-#define YoYoWiFiManagerCredentialsListMax 8
+#define YoYoWiFiManagerSetingsMaxListCount  8
+#define YoYoWiFiManagerSetingsAddress       0
+#define YoYoWiFiManagerSetingsSize          512
 
-class YoYoWiFiManagerCredentials {
+class YoYoWiFiManagerSetings {
     private:
-        Preferences credentials;
-        String *credentialsAsList[YoYoWiFiManagerCredentialsListMax];
+        //Preferences credentials;
+        String *credentialsAsList[YoYoWiFiManagerSetingsMaxListCount];
 
         void init() {
-            for(int n=0; n < YoYoWiFiManagerCredentialsListMax; ++n) {
+            EEPROM.begin(YoYoWiFiManagerSetingsSize);
+
+            for(int n=0; n < YoYoWiFiManagerSetingsMaxListCount; ++n) {
                 credentialsAsList[n] = NULL;
             }
-            
+
             loadCredentials();
         }
 
         size_t getString(const char* key, char* value, const size_t maxLen) {
             size_t len = 0;
             
-            credentials.begin(YoYoWiFiManagerCredentialsNameSpace);
-            len = credentials.getString(key, value, maxLen);
-            credentials.end();
+            //credentials.begin(YoYoWiFiManagerSetingsNameSpace);
+            //len = credentials.getString(key, value, maxLen);
+            //credentials.end();
 
             return(len);
         }
 
         void putString(const char* key, String value) {
-            credentials.begin(YoYoWiFiManagerCredentialsNameSpace);
-            credentials.putString(key, value);
-            credentials.end();
+            // credentials.begin(YoYoWiFiManagerSetingsNameSpace);
+            // credentials.putString(key, value);
+            // credentials.end();
         }
 
         void loadCredentials() {
-            char s[256];
-            if(getString("credentials", s, 256) > 0) {
+            Serial.println("loadCredentials");
+            char s[YoYoWiFiManagerSetingsSize];
+
+            EEPROM.get(YoYoWiFiManagerSetingsAddress, s);
+            if(strlen(s) > 0) {
                 const char d[2] = ":";
 
                 char *credentials;
@@ -58,8 +61,9 @@ class YoYoWiFiManagerCredentials {
         }
 
         void saveCredentials() {
+            /*
             String s;
-            for(int n=0; n < YoYoWiFiManagerCredentialsListMax; ++n) {
+            for(int n=0; n < YoYoWiFiManagerSetingsListMaxLength; ++n) {
                 if(credentialsAsList[n] != NULL) {
                     s+=*credentialsAsList[n];
                     s+=":";
@@ -67,10 +71,12 @@ class YoYoWiFiManagerCredentials {
             }
             Serial.printf("saveCredentials: %s\n", s.c_str());
             putString("credentials", s);
+            */
         }
+
     public:
-        YoYoWiFiManagerCredentials() {
-            Serial.println("YoYoWiFiManagerCredentials");
+        YoYoWiFiManagerSetings() {
+            Serial.println("YoYoWiFiManagerSetings");
             init();
         }
 
@@ -79,7 +85,8 @@ class YoYoWiFiManagerCredentials {
         }
 
         void add(const char *ssid, const char *password) {
-            int oldestN = YoYoWiFiManagerCredentialsListMax-1;
+            /*
+            int oldestN = YoYoWiFiManagerSetingsListMax-1;
             if(credentialsAsList[oldestN] != NULL) delete credentialsAsList[oldestN];
 
             for(int n = oldestN; n > 0; --n) {
@@ -88,12 +95,13 @@ class YoYoWiFiManagerCredentials {
             credentialsAsList[0] = new String(String(ssid) + "," + String(password));   //TODO: double check seprator chars can be relied on;
 
             saveCredentials();
+            */
         }
 
         String *get(int n) {
             String *result = NULL;
             
-            if(n >= 0 && n < YoYoWiFiManagerCredentialsListMax) {
+            if(n >= 0 && n < YoYoWiFiManagerSetingsMaxListCount) {
                 result = credentialsAsList[n];
             }
 
@@ -103,7 +111,7 @@ class YoYoWiFiManagerCredentials {
         String *getSSID(int n) {
             String *result = NULL;
 
-            if(n >= 0 && n < YoYoWiFiManagerCredentialsListMax) {
+            if(n >= 0 && n < YoYoWiFiManagerSetingsMaxListCount) {
                 String *s = credentialsAsList[n];
                 result = new String(s -> substring(0, s -> indexOf(',')));  //TODO: memory leak
             }
@@ -114,7 +122,7 @@ class YoYoWiFiManagerCredentials {
         String *getPassword(int n) {
             String *result = NULL;
 
-            if(n >= 0 && n < YoYoWiFiManagerCredentialsListMax) {
+            if(n >= 0 && n < YoYoWiFiManagerSetingsMaxListCount) {
                 String *s = credentialsAsList[n];
                 result = new String(s -> substring(s -> indexOf(',')+1));  //TODO: memory leak
             }
@@ -123,25 +131,21 @@ class YoYoWiFiManagerCredentials {
         }
 
         int getQuantity() {
-            int result = YoYoWiFiManagerCredentialsListMax;
+            int result = YoYoWiFiManagerSetingsMaxListCount;
 
-            for(int n=0; n < YoYoWiFiManagerCredentialsListMax && result == YoYoWiFiManagerCredentialsListMax; ++n) {
-                if(credentialsAsList[n] == NULL) {
-                    result = n;
-                }
-            }
+            // for(int n=0; n < YoYoWiFiManagerSetingsListMax && result == YoYoWiFiManagerSetingsListMax; ++n) {
+            //     if(credentialsAsList[n] == NULL) {
+            //         result = n;
+            //     }
+            // }
 
             return(result);
         }
 
-        bool clear() {
-            bool result = false;
-
-            credentials.begin(YoYoWiFiManagerCredentialsNameSpace);
-            result = credentials.clear();
-            credentials.end();
-
-            return(result);
+        void clear() {
+            for (int i = YoYoWiFiManagerSetingsAddress; i < YoYoWiFiManagerSetingsSize; i++) {
+                EEPROM.write(i, 0);
+            }
         }
 };
 
