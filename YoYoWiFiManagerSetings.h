@@ -1,14 +1,14 @@
-#ifndef YoYoWiFiManagerSetings_h
-#define YoYoWiFiManagerSetings_h
+#ifndef Settings_h
+#define Settings_h
 
 #include <ArduinoJson.h>
 #include <EEPROM.h>
 #include <StreamUtils.h>
 
-// #define YoYoWiFiManagerSetingsAddress       0
-// #define YoYoWiFiManagerSetingsSize          EEPROM.length()
+// #define SettingsAddress       0
+// #define SettingsSize          EEPROM.length()
 
-// #define YoYoWiFiManagerSetingsMaxListCount  8
+// #define SettingsMaxListCount  8
 //           512
 
 #if defined(ESP8266)
@@ -17,7 +17,7 @@
     #define YY_MAX_EEPROM_CAPACITY_BYTES  512
 #endif
 
-class YoYoWiFiManagerSetings : public DynamicJsonDocument {
+class Settings : public DynamicJsonDocument {
     private:
         int eepromAddress = 0;
         int eepromCapacityBytes = 0;
@@ -32,8 +32,8 @@ class YoYoWiFiManagerSetings : public DynamicJsonDocument {
         }
 
     public:
-        YoYoWiFiManagerSetings(int capacityBytes, int address = 0) : DynamicJsonDocument(capacityBytes) {
-            Serial.println("YoYoWiFiManagerSetings");
+        Settings(int capacityBytes, int address = 0) : DynamicJsonDocument(capacityBytes) {
+            Serial.println("Settings");
             init(capacityBytes, address);
         }
 
@@ -48,7 +48,7 @@ class YoYoWiFiManagerSetings : public DynamicJsonDocument {
         }
 
         void addNetwork(const char *ssid, const char *password) {
-            // int oldestN = YoYoWiFiManagerSetingsListMax-1;
+            // int oldestN = SettingsListMax-1;
             // if(credentialsAsList[oldestN] != NULL) delete credentialsAsList[oldestN];
 
             // for(int n = oldestN; n > 0; --n) {
@@ -71,7 +71,7 @@ class YoYoWiFiManagerSetings : public DynamicJsonDocument {
         String *get(int n) {
             String *result = NULL;
             
-            if(n >= 0 && n < YoYoWiFiManagerSetingsMaxListCount) {
+            if(n >= 0 && n < SettingsMaxListCount) {
                 result = credentialsAsList[n];
             }
 
@@ -81,7 +81,7 @@ class YoYoWiFiManagerSetings : public DynamicJsonDocument {
         String *getSSID(int n) {
             String *result = NULL;
 
-            if(n >= 0 && n < YoYoWiFiManagerSetingsMaxListCount) {
+            if(n >= 0 && n < SettingsMaxListCount) {
                 String *s = credentialsAsList[n];
                 result = new String(s -> substring(0, s -> indexOf(',')));  //TODO: memory leak
             }
@@ -92,7 +92,7 @@ class YoYoWiFiManagerSetings : public DynamicJsonDocument {
         String *getPassword(int n) {
             String *result = NULL;
 
-            if(n >= 0 && n < YoYoWiFiManagerSetingsMaxListCount) {
+            if(n >= 0 && n < SettingsMaxListCount) {
                 String *s = credentialsAsList[n];
                 result = new String(s -> substring(s -> indexOf(',')+1));  //TODO: memory leak
             }
@@ -101,7 +101,7 @@ class YoYoWiFiManagerSetings : public DynamicJsonDocument {
         }
 
         void clear() {
-            for (int i = YoYoWiFiManagerSetingsAddress; i < YoYoWiFiManagerSetingsSize; i++) {
+            for (int i = SettingsAddress; i < SettingsSize; i++) {
                 EEPROM.write(i, 0);
             }
         }

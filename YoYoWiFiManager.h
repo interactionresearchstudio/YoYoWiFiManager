@@ -21,7 +21,7 @@
   #include <nvs_flash.h>
 #endif
 
-#include "YoYoWiFiManagerSetings.h"
+#include "Settings.h"
 #include "Levenshtein.h"
 #include "Espressif.h"
 #include "index_html.h"
@@ -75,7 +75,7 @@ class YoYoWiFiManager : public AsyncWebHandler {
 
     long clientTimeOutAtMs = -1;
 
-    YoYoWiFiManagerSetings *settingsJson = NULL;
+    Settings *settingsJson = NULL;
     uint8_t wifiLEDPin;
 
     bool SPIFFS_ENABLED = false;

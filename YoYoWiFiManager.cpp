@@ -4,7 +4,7 @@ YoYoWiFiManager::YoYoWiFiManager() {
 }
 
 void YoYoWiFiManager::init(callbackPtr getHandler, callbackPtr postHandler, uint8_t wifiLEDPin) {
-  settingsJson = new YoYoWiFiManagerSetings(512);
+  settingsJson = new Settings(512);
 
   this -> yoYoCommandGetHandler = getHandler;
   this -> yoYoCommandPostHandler = postHandler;
