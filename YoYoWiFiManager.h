@@ -21,7 +21,7 @@
   #include <nvs_flash.h>
 #endif
 
-#include "Settings.h"
+#include "YoYoWiFiManagerSettings.h"
 #include "Levenshtein.h"
 #include "Espressif.h"
 #include "index_html.h"
@@ -75,7 +75,7 @@ class YoYoWiFiManager : public AsyncWebHandler {
 
     long clientTimeOutAtMs = -1;
 
-    Settings *settingsJson = NULL;
+    YoYoWiFiManagerSettings *settings = NULL;
     uint8_t wifiLEDPin;
 
     bool SPIFFS_ENABLED = false;
@@ -116,7 +116,7 @@ class YoYoWiFiManager : public AsyncWebHandler {
   public:
     YoYoWiFiManager();
 
-    void init(callbackPtr getHandler = NULL, callbackPtr postHandler = NULL, uint8_t wifiLEDPin = 2);
+    void init(YoYoWiFiManagerSettings *settings, callbackPtr getHandler = NULL, callbackPtr postHandler = NULL, uint8_t wifiLEDPin = 2);
     boolean begin(char const *apName, char const *apPassword = NULL, bool autoconnect = false);
     void setPeerNetworkCredentials(char *ssid, char *password);
     void connect();

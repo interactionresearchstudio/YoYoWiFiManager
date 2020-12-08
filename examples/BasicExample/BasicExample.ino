@@ -2,14 +2,14 @@
 #include "Settings.h"
 
 YoYoWiFiManager wifiManager;
-Settings settings;
+Settings settings(512);
 
 uint8_t currentStatus = YoYoWiFiManager::YY_IDLE_STATUS;
 
 void setup() {
   Serial.begin(115200);
 
-  wifiManager.init(onYoYoCommandGET, onYoYoCommandPOST);
+  wifiManager.init(&settings, onYoYoCommandGET, onYoYoCommandPOST);
   wifiManager.begin("YoYoMachines", "blinkblink", true);
 }
 

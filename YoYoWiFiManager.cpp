@@ -3,9 +3,7 @@
 YoYoWiFiManager::YoYoWiFiManager() {
 }
 
-void YoYoWiFiManager::init(callbackPtr getHandler, callbackPtr postHandler, uint8_t wifiLEDPin) {
-  settingsJson = new Settings(512);
-
+void YoYoWiFiManager::init(YoYoWiFiManagerSettings *settings, callbackPtr getHandler, callbackPtr postHandler, uint8_t wifiLEDPin) {
   this -> yoYoCommandGetHandler = getHandler;
   this -> yoYoCommandPostHandler = postHandler;
 
@@ -24,7 +22,7 @@ void YoYoWiFiManager::init(callbackPtr getHandler, callbackPtr postHandler, uint
 boolean YoYoWiFiManager::begin(char const *apName, char const *apPassword, bool autoconnect) {
   setPeerNetworkCredentials((char *)apName, (char *)apPassword);
 
-  if(autoconnect && settingsJson -> hasNetworkCredentials()) {
+  if(autoconnect && settings && settings -> hasNetworkCredentials()) {
     Serial.println("network credentials available");
     addKnownNetworks();
     setMode(YY_MODE_CLIENT);
