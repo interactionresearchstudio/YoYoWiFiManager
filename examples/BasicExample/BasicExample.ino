@@ -2,14 +2,15 @@
 #include "Settings.h"
 
 YoYoWiFiManager wifiManager;
-Settings settings(512);
+Settings *settings;
 
 uint8_t currentStatus = YoYoWiFiManager::YY_IDLE_STATUS;
 
 void setup() {
   Serial.begin(115200);
 
-  wifiManager.init(&settings, onYoYoCommandGET, onYoYoCommandPOST);
+  settings = new Settings(512); //Settings must be created here in Setup() as contains call to EEPROM.begin() which will otherwise fail
+  wifiManager.init(settings, onYoYoCommandGET, onYoYoCommandPOST);
   wifiManager.begin("YoYoMachines", "blinkblink", true);
 }
 
@@ -44,9 +45,9 @@ bool onYoYoCommandGET(const String &url, JsonVariant json) {
   //put the results of this into the json object
   Serial.println("onYoYoCommandGET " + url);
   
-  if(url.equals("/yoyo/settings")) {
+  if(url.equals("/yoyo/settings") && settings) {
     success = true;
-    json["payload"] = "hey! hey!";
+    json.set(settings->to<JsonObject>());
   }
 
  return(success);
