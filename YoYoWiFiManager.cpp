@@ -159,15 +159,13 @@ bool YoYoWiFiManager::findNetwork(char const *ssid, char *matchingSSID, bool aut
 }
 
 uint8_t YoYoWiFiManager::update() {
-  /*
   dnsServer.processNextRequest();
 
   updateMode();
   updateStatus();
   digitalWrite(wifiLEDPin, currentStatus != YY_CONNECTED);
 
-  return(currentStatus); 
-  */
+  return(currentStatus);
 }
 
 YoYoWiFiManager::yy_mode_t YoYoWiFiManager::updateMode() {
