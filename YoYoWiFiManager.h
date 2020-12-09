@@ -90,7 +90,7 @@ class YoYoWiFiManager : public AsyncWebHandler {
     uint8_t updateStatus();
 
     void addKnownNetworks();
-    bool addNetwork(char const *ssid, char const *password, bool save = true);
+    bool addNetwork(char const *ssid, char const *password, bool autosave = true);
 
     String getNetworksAsJsonString();
     void getNetworksAsJson(JsonDocument& jsonDoc);
