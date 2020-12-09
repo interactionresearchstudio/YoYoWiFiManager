@@ -5,12 +5,6 @@
 #include <EEPROM.h>
 #include <StreamUtils.h>
 
-// #define SettingsAddress       0
-// #define SettingsSize          EEPROM.length()
-
-// #define SettingsMaxListCount  8
-//           512
-
 #if defined(ESP8266)
     #define YY_MAX_EEPROM_CAPACITY_BYTES  512
 #elif defined(ESP32)
@@ -43,14 +37,20 @@ class Settings : public DynamicJsonDocument, public YoYoWiFiManagerSettings {
             return(result);
         }
 
-        void addNetwork(const char *ssid, const char *password) {
-            JsonObject *json = new JsonObject();
-            (*json)["ssid"] = ssid;
-            (*json)["password"] = password;
+        void addNetwork(const char *ssid, const char *password, bool autosave = true) {
+            Serial.printf("Settings::addNetwork %s  %s\n", ssid, password);
 
-            (*this)["credentials"].add(*json);
+            StaticJsonDocument<128> json;
+            json["ssid"] = ssid;
+            json["password"] = password;
 
-            delete json;
+            Serial.print("Adding... ");
+            serializeJson(json, Serial);
+            Serial.print("\n");
+
+            (*this)["credentials"].add(json);
+
+            if(autosave) save();
         }
 
         void getSSID(int n, char *ssid) {
@@ -62,6 +62,9 @@ class Settings : public DynamicJsonDocument, public YoYoWiFiManagerSettings {
         }
 
         bool save() {
+            Serial.println("SAVE---SAVE---SAVE---SAVE---SAVE");
+            serializeJson(*this, Serial);
+
             EepromStream eepromStream(this -> eepromAddress, this -> eepromCapacityBytes);
             serializeJson(*this, eepromStream);
             eepromStream.flush(); 
