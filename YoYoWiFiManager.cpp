@@ -4,6 +4,7 @@ YoYoWiFiManager::YoYoWiFiManager() {
 }
 
 void YoYoWiFiManager::init(YoYoWiFiManagerSettings *settings, callbackPtr getHandler, callbackPtr postHandler, uint8_t wifiLEDPin) {
+  this -> settings = settings;
   this -> yoYoCommandGetHandler = getHandler;
   this -> yoYoCommandPostHandler = postHandler;
 
@@ -112,29 +113,38 @@ void YoYoWiFiManager::startWebServer() {
 }
 
 void YoYoWiFiManager::addKnownNetworks() {
-  /*
-  int credentialsCount = credentials.getQuantity();
-  for(int n = 0; n < credentialsCount; ++n) {
-    addNetwork(credentials.getSSID(n) -> c_str(), credentials.getPassword(n) -> c_str(), false);
+  if(settings) {
+    int numberOfNetworkCredentials = settings->getNumberOfNetworkCredentials();
+    char *ssid = new char[32];
+    char *password = new char[64];
+    for(int n = 0; n < numberOfNetworkCredentials; ++n) {
+      settings -> getSSID(n, ssid);
+      settings -> getPassword(n, password);
+      addNetwork(ssid, password, false);
+    }
+    delete ssid, password;
   }
-  */
 }
 
 bool YoYoWiFiManager::addNetwork(char const *ssid, char const *password, bool save) {
+  Serial.printf("YoYoWiFiManager::addNetwork %s  %s\n", ssid, password);
+
   bool success = false;
 
-  if(strlen(ssid) > 0 && strlen(ssid) <= SSID_MAX_LENGTH) {
-    char *matchingSSID = new char[SSID_MAX_LENGTH];
+  if(settings) {
+    if(strlen(ssid) > 0 && strlen(ssid) <= SSID_MAX_LENGTH) {
+      char *matchingSSID = new char[SSID_MAX_LENGTH];
 
-    if(findNetwork(ssid, matchingSSID, false, true, 2)) {
-      ssid = matchingSSID;
-    }
+      if(findNetwork(ssid, matchingSSID, false, true, 2)) {
+        ssid = matchingSSID;
+      }
 
-    if(wifiMulti.addAP(ssid, password)) {
-      //if(save) credentials.add(ssid, password);
-      success = true;
+      if(wifiMulti.addAP(ssid, password)) {
+        if(save) settings -> addNetwork(ssid, password);
+        success = true;
+      }
+      delete matchingSSID;
     }
-    delete matchingSSID;
   }
 
   return(success);
@@ -479,7 +489,7 @@ bool YoYoWiFiManager::setCredentials(JsonVariant json) {
   const char* password = json["password"];
 
   if(ssid && password) {
-    addNetwork(ssid, password);
+    addNetwork(ssid, password, true);
     success = true;
   }
 
