@@ -68,46 +68,6 @@ class Settings : public DynamicJsonDocument, public YoYoWiFiManagerSettings {
 
             return(true);
         }
-
-        /*
-        String *get(int n) {
-            String *result = NULL;
-            
-            if(n >= 0 && n < SettingsMaxListCount) {
-                result = credentialsAsList[n];
-            }
-
-            return(result);
-        }
-
-        String *getSSID(int n) {
-            String *result = NULL;
-
-            if(n >= 0 && n < SettingsMaxListCount) {
-                String *s = credentialsAsList[n];
-                result = new String(s -> substring(0, s -> indexOf(',')));  //TODO: memory leak
-            }
-
-            return(result);
-        }
-
-        String *getPassword(int n) {
-            String *result = NULL;
-
-            if(n >= 0 && n < SettingsMaxListCount) {
-                String *s = credentialsAsList[n];
-                result = new String(s -> substring(s -> indexOf(',')+1));  //TODO: memory leak
-            }
-
-            return(result);
-        }
-
-        void clear() {
-            for (int i = SettingsAddress; i < SettingsSize; i++) {
-                EEPROM.write(i, 0);
-            }
-        }
-        */
 };
 
 #endif
