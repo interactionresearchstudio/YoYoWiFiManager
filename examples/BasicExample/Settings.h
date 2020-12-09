@@ -37,10 +37,6 @@ class Settings : public DynamicJsonDocument, public YoYoWiFiManagerSettings {
             init(capacityBytes, address);
         }
 
-        bool hasNetworkCredentials() {
-            return(getNumberOfNetworkCredentials() > 0);
-        }
-
         int getNumberOfNetworkCredentials() {
             int result = (*this)["credentials"].size();
 
@@ -48,21 +44,21 @@ class Settings : public DynamicJsonDocument, public YoYoWiFiManagerSettings {
         }
 
         void addNetwork(const char *ssid, const char *password) {
-            // int oldestN = SettingsListMax-1;
-            // if(credentialsAsList[oldestN] != NULL) delete credentialsAsList[oldestN];
+            JsonObject *json = new JsonObject();
+            (*json)["ssid"] = ssid;
+            (*json)["password"] = password;
 
-            // for(int n = oldestN; n > 0; --n) {
-            //     credentialsAsList[n] = credentialsAsList[n-1];
-            // }
-            // credentialsAsList[0] = new String(String(ssid) + "," + String(password));   //TODO: double check seprator chars can be relied on;
+            (*this)["credentials"].add(*json);
 
-            // saveCredentials();
+            delete json;
         }
 
         void getSSID(int n, char *ssid) {
+            strcpy(ssid, (*this)["credentials"][n]["ssid"]);
         }
 
         void getPassword(int n, char *password) {
+            strcpy(password, (*this)["credentials"][n]["password"]);
         }
 
         bool save() {
