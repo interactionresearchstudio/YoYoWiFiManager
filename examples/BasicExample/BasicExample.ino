@@ -48,7 +48,7 @@ bool onYoYoCommandGET(const String &url, JsonVariant json) {
   
   if(url.equals("/yoyo/settings") && settings) {
     success = true;
-    json.set(settings->to<JsonObject>());
+    json.set(*settings);
   }
 
  return(success);
