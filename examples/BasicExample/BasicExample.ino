@@ -10,6 +10,7 @@ void setup() {
   Serial.begin(115200);
 
   settings = new Settings(512); //Settings must be created here in Setup() as contains call to EEPROM.begin() which will otherwise fail
+  
   wifiManager.init(settings, onYoYoCommandGET, onYoYoCommandPOST);
   wifiManager.begin("YoYoMachines", "blinkblink", true);
 }
