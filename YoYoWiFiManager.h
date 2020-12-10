@@ -130,6 +130,7 @@ class YoYoWiFiManager : public AsyncWebHandler {
     //AsyncWebHandler:
     bool canHandle(AsyncWebServerRequest *request);
     void handleRequest(AsyncWebServerRequest *request);
+    void handleCapativePortalRequest(AsyncWebServerRequest *request);
     void handleBody(AsyncWebServerRequest * request, uint8_t *data, size_t len, size_t index, size_t total);
     void sendFile(AsyncWebServerRequest * request, String path);
     void sendIndexFile(AsyncWebServerRequest * request);
