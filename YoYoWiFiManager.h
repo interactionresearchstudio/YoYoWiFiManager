@@ -8,7 +8,7 @@
 
 #if defined(ESP8266)
   #include <ESP8266WiFiMulti.h>
-  //#include <ESPAsyncTCP.h>
+  #include <ESPAsyncTCP.h>      //not currently available via Library Manager > https://github.com/me-no-dev/ESPAsyncTCP
   #include "FS.h"
 #elif defined(ESP32)
   #include <HTTPClient.h>
@@ -17,9 +17,8 @@
   #include "esp_wifi.h"
   #include <AsyncTCP.h>
   #include "SPIFFS.h"
-  #include <ESPAsyncWebServer.h>
-  #include <nvs_flash.h>
 #endif
+#include <ESPAsyncWebServer.h>
 
 #include "YoYoWiFiManagerSettings.h"
 #include "Levenshtein.h"
