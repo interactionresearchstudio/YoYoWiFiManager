@@ -31,6 +31,7 @@ boolean YoYoWiFiManager::begin(char const *apName, char const *apPassword, bool 
   else {
     setMode(createPeerNetwork());
   }
+  startWebServer();
 
   return(true);
 }
@@ -59,7 +60,7 @@ YoYoWiFiManager::yy_mode_t YoYoWiFiManager::createPeerNetwork() {
   return(mode);
 }
 
-// Scan and connect to peer wifi network. Returns true if joined.
+// Scan and connect to peer wifi network. Blocking - returns true if joined.
 boolean YoYoWiFiManager::joinPeerNetworkAsClient() {
   boolean joinedPeerNetwork = false;
 
@@ -78,7 +79,6 @@ boolean YoYoWiFiManager::joinPeerNetworkAsClient() {
     Serial.println("IP address: ");
     Serial.println(WiFi.localIP());
 
-    startWebServer();
     joinedPeerNetwork = true;
   }
 
@@ -101,14 +101,12 @@ void YoYoWiFiManager::joinPeerNetworkAsServer() {
 
   //Start captive portal
   dnsServer.start(DNS_PORT, "*", apIP);
-
-  startWebServer();
 }
 
 void YoYoWiFiManager::startWebServer() {
   Serial.println("startWebServer\n");
 
-  webserver.addHandler(this).setFilter(ON_AP_FILTER);  //only when requested from AP
+  webserver.addHandler(this); //.setFilter(ON_AP_FILTER);  //only when requested from AP
   webserver.begin();
 }
 
@@ -313,7 +311,23 @@ void YoYoWiFiManager::handleRequest(AsyncWebServerRequest *request) {
     else if (SPIFFS_ENABLED && SPIFFS.exists(request->url())) {
       sendFile(request, request->url());
     }
-    else if (request->url().endsWith(".html") || 
+    else if (currentMode == YY_MODE_PEER_SERVER) {
+      handleCapativePortalRequest(request);
+    }
+    else {
+      request->send(404);
+    }
+  }
+  else if (request->method() == HTTP_POST) {
+    request->send(400); //POSTs are expected to have a body and then be processes by handleBody()
+  }
+  else {
+    request->send(400);
+  }
+}
+
+void YoYoWiFiManager::handleCapativePortalRequest(AsyncWebServerRequest *request) {
+    if (request->url().endsWith(".html") || 
               request->url().endsWith("/") ||
               request->url().endsWith("generate_204") ||
               request->url().endsWith("redirect"))  {
@@ -330,13 +344,6 @@ void YoYoWiFiManager::handleRequest(AsyncWebServerRequest *request) {
     else {
       request->send(304);
     }
-  }
-  else if (request->method() == HTTP_POST) {
-    request->send(400); //POSTs are expected to have a body and then be processes by handleBody()
-  }
-  else {
-    request->send(400);
-  }
 }
 
 void YoYoWiFiManager::handleBody(AsyncWebServerRequest * request, uint8_t *data, size_t len, size_t index, size_t total) {
