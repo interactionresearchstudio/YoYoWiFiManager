@@ -521,20 +521,29 @@ String YoYoWiFiManager::getPeersAsJsonString() {
 }
 
 void YoYoWiFiManager::getPeersAsJson(JsonDocument& jsonDoc) {
-  //TODO: if client of AP
   JsonArray peers = jsonDoc.createNestedArray();
  
-  int peerCount = updatePeerList();
-
   char *ipAddress = new char[17];
   char *macAddress = new char[18];
-  for (int i = 0; i < peerCount; i++) {
-    getPeerN(i, ipAddress, macAddress, true);
- 
-    JsonObject peer  = peers.createNestedObject();
-    peer["IP"] = ipAddress;
-    peer["MAC"] = macAddress;   
+
+  if(currentMode == YY_MODE_PEER_SERVER) {
+      int peerCount = updatePeerList();
+
+      for (int i = 0; i < peerCount; i++) {
+        getPeerN(i, ipAddress, macAddress, true);
+    
+        JsonObject peer  = peers.createNestedObject();
+        peer["IP"] = ipAddress;
+        peer["MAC"] = macAddress;   
+      }
   }
+  else if(currentMode == YY_MODE_PEER_CLIENT) {
+    //TODO
+  }
+  else if(currentMode == YY_MODE_CLIENT) {
+    //TODO
+  }
+
   delete ipAddress;
   delete macAddress;
 }
@@ -542,15 +551,25 @@ void YoYoWiFiManager::getPeersAsJson(JsonDocument& jsonDoc) {
 int YoYoWiFiManager::updatePeerList() {
   int count = 0;
 
-  esp_wifi_ap_get_sta_list(&wifi_sta_list);
-  tcpip_adapter_get_sta_list(&wifi_sta_list, &adapter_sta_list);
-  count = adapter_sta_list.num;
+  if(currentMode == YY_MODE_PEER_SERVER) {
+    esp_wifi_ap_get_sta_list(&wifi_sta_list);
+    tcpip_adapter_get_sta_list(&wifi_sta_list, &adapter_sta_list);
+    count = adapter_sta_list.num;
+  }
+  else if(currentMode == YY_MODE_PEER_CLIENT) {
+    //TODO
+  }
+  else if(currentMode == YY_MODE_CLIENT) {
+    //TODO
+  }
 
   return(count);
 }
 
 int YoYoWiFiManager::countPeers() {
   int count = 0;
+
+  //TODO
 
   return(count);
 }
