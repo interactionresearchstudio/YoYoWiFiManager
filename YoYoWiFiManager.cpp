@@ -106,7 +106,7 @@ void YoYoWiFiManager::joinPeerNetworkAsServer() {
 void YoYoWiFiManager::startWebServer() {
   Serial.println("startWebServer\n");
 
-  webserver.addHandler(this); //.setFilter(ON_AP_FILTER);  //only when requested from AP
+  webserver.addHandler(this);
   webserver.begin();
 }
 

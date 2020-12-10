@@ -43,7 +43,6 @@ void loop() {
 bool onYoYoCommandGET(const String &url, JsonVariant json) {
   bool success = false;
 
-  //put the results of this into the json object
   Serial.println("onYoYoCommandGET " + url);
   
   if(url.equals("/yoyo/settings") && settings) {
@@ -51,7 +50,7 @@ bool onYoYoCommandGET(const String &url, JsonVariant json) {
     json.set(*settings);
   }
 
- return(success);
+  return(success);
 }
 
 bool onYoYoCommandPOST(const String &url, JsonVariant json) {
