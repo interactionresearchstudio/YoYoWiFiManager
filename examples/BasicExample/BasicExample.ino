@@ -101,12 +101,15 @@ void printStatus() {
   }   
 }
 
-// Generates a unique ID based on the ESP32's mac
 String generateID() {
-  //https://github.com/espressif/arduino-esp32/issues/3859#issuecomment-689171490
-  uint64_t chipID = ESP.getEfuseMac();
-  uint32_t low = chipID % 0xFFFFFFFF;
-  uint32_t high = (chipID >> 32) % 0xFFFFFFFF;
-  String out = String(low);
-  return  out;
+  uint32_t id = 0;
+
+  //the id is the lowest 4 bytes of the MAC adddress:
+  #if defined(ESP8266)
+    id = ESP.getChipId();
+  #elif defined(ESP32)
+    id = ESP.getEfuseMac() % 0xFFFFFFFF;
+  #endif
+
+  return(String(id));
 }
