@@ -108,7 +108,7 @@ String generateID() {
   #if defined(ESP8266)
     id = ESP.getChipId();
   #elif defined(ESP32)
-    id = ESP.getEfuseMac() % 0xFFFFFFFF;
+    id = ESP.getEfuseMac() && 0xFFFFFFFF;
   #endif
 
   return(String(id));
