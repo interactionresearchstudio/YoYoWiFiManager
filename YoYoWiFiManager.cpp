@@ -332,7 +332,7 @@ void YoYoWiFiManager::handleRequest(AsyncWebServerRequest *request) {
       sendIndexFile(request);
     }
     else if (currentMode == YY_MODE_PEER_SERVER) {
-      handleCapativePortalRequest(request);
+      handleCaptivePortalRequest(request);
     }
     else {
       request->send(404);
@@ -346,7 +346,7 @@ void YoYoWiFiManager::handleRequest(AsyncWebServerRequest *request) {
   }
 }
 
-void YoYoWiFiManager::handleCapativePortalRequest(AsyncWebServerRequest *request) {
+void YoYoWiFiManager::handleCaptivePortalRequest(AsyncWebServerRequest *request) {
     if (request->url().endsWith(".html") || 
               request->url().endsWith("/") ||
               request->url().endsWith("generate_204") ||
