@@ -273,6 +273,7 @@ void YoYoWiFiManager::onStatusChanged() {
       Serial.println(WiFi.localIP());
 
       if(startWebServerOnceConnected) startWebServer();
+      else stopWebServer(); //make sure it's stopped
       break;
     case YY_CONNECTED_PEER_CLIENT:
       break;
