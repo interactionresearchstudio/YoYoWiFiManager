@@ -328,6 +328,9 @@ void YoYoWiFiManager::handleRequest(AsyncWebServerRequest *request) {
     else if (SPIFFS_ENABLED && SPIFFS.exists(request->url())) {
       sendFile(request, request->url());
     }
+    else if(request->url().equals("/")) {
+      sendIndexFile(request);
+    }
     else if (currentMode == YY_MODE_PEER_SERVER) {
       handleCapativePortalRequest(request);
     }
