@@ -3,10 +3,13 @@
 YoYoWiFiManager::YoYoWiFiManager() {
 }
 
-void YoYoWiFiManager::init(YoYoWiFiManagerSettings *settings, callbackPtr getHandler, callbackPtr postHandler, uint8_t wifiLEDPin) {
+void YoYoWiFiManager::init(YoYoWiFiManagerSettings *settings, callbackPtr getHandler, callbackPtr postHandler, bool startWebServerOnceConnected, int webServerPort, uint8_t wifiLEDPin) {
   this -> settings = settings;
   this -> yoYoCommandGetHandler = getHandler;
   this -> yoYoCommandPostHandler = postHandler;
+
+  this -> startWebServerOnceConnected = startWebServerOnceConnected;
+  this -> webServerPort = webServerPort;
 
   this -> wifiLEDPin = wifiLEDPin;
   pinMode(wifiLEDPin, OUTPUT);
@@ -31,7 +34,6 @@ boolean YoYoWiFiManager::begin(char const *apName, char const *apPassword, bool 
   else {
     setMode(createPeerNetwork());
   }
-  startWebServer();
 
   return(true);
 }
@@ -56,6 +58,7 @@ YoYoWiFiManager::yy_mode_t YoYoWiFiManager::createPeerNetwork() {
     mode = YY_MODE_PEER_SERVER;
     joinPeerNetworkAsServer();
   }
+  startWebServer();
 
   return(mode);
 }
@@ -106,8 +109,19 @@ void YoYoWiFiManager::joinPeerNetworkAsServer() {
 void YoYoWiFiManager::startWebServer() {
   Serial.println("startWebServer\n");
 
-  webserver.addHandler(this);
-  webserver.begin();
+  if(webserver == NULL) {
+    webserver = new AsyncWebServer(webServerPort);
+    webserver -> addHandler(this);
+    webserver -> begin();
+  }
+}
+
+void YoYoWiFiManager::stopWebServer() {
+  if(webserver != NULL) {
+    webserver -> end();
+    delete(webserver);
+    webserver = NULL;
+  }
 }
 
 void YoYoWiFiManager::addKnownNetworks() {
@@ -257,6 +271,8 @@ void YoYoWiFiManager::onStatusChanged() {
       Serial.println("WiFi connected");
       Serial.println("IP address: ");
       Serial.println(WiFi.localIP());
+
+      if(startWebServerOnceConnected) startWebServer();
       break;
     case YY_CONNECTED_PEER_CLIENT:
       break;

@@ -70,7 +70,10 @@ class YoYoWiFiManager : public AsyncWebHandler {
     const byte DNS_PORT = 53;
     DNSServer dnsServer;
     IPAddress apIP = IPAddress(192, 168, 4, 1);
-    AsyncWebServer webserver = AsyncWebServer(80);
+
+    int webServerPort = 80;
+    AsyncWebServer *webserver = NULL;
+    bool startWebServerOnceConnected = false;
 
     long clientTimeOutAtMs = -1;
 
@@ -84,6 +87,7 @@ class YoYoWiFiManager : public AsyncWebHandler {
     callbackPtr yoYoCommandPostHandler = NULL;
 
     void startWebServer();
+    void stopWebServer();
 
     yy_mode_t updateMode();
     uint8_t updateStatus();
@@ -115,7 +119,7 @@ class YoYoWiFiManager : public AsyncWebHandler {
   public:
     YoYoWiFiManager();
 
-    void init(YoYoWiFiManagerSettings *settings, callbackPtr getHandler = NULL, callbackPtr postHandler = NULL, uint8_t wifiLEDPin = 2);
+    void init(YoYoWiFiManagerSettings *settings, callbackPtr getHandler = NULL, callbackPtr postHandler = NULL, bool startWebServerOnceConnected = false, int webServerPort = 80, uint8_t wifiLEDPin = 2);
     boolean begin(char const *apName, char const *apPassword = NULL, bool autoconnect = false);
     void setPeerNetworkCredentials(char *ssid, char *password);
     void connect();
