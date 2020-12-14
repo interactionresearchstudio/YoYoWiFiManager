@@ -14,8 +14,11 @@ void YoYoWiFiManager::init(YoYoWiFiManagerSettings *settings, callbackPtr getHan
   this -> wifiLEDPin = wifiLEDPin;
   pinMode(wifiLEDPin, OUTPUT);
 
-  memset(&wifi_sta_list, 0, sizeof(wifi_sta_list));
-  memset(&adapter_sta_list, 0, sizeof(adapter_sta_list));
+  #if defined(ESP8266)
+  #elif defined(ESP32)
+    memset(&wifi_sta_list, 0, sizeof(wifi_sta_list));
+    memset(&adapter_sta_list, 0, sizeof(adapter_sta_list));
+  #endif
 
   SPIFFS_ENABLED = SPIFFS.begin();
 
@@ -181,7 +184,17 @@ bool YoYoWiFiManager::findNetwork(char const *ssid, char *matchingSSID, bool aut
 }
 
 uint8_t YoYoWiFiManager::update() {
-  dnsServer.processNextRequest();
+  switch(currentMode) {
+    case YY_MODE_NONE:
+      break;
+    case YY_MODE_CLIENT:
+      break;
+    case YY_MODE_PEER_CLIENT:
+      break;
+    case YY_MODE_PEER_SERVER:
+      dnsServer.processNextRequest();
+      break;
+  }
 
   updateMode();
   updateStatus();
@@ -212,6 +225,7 @@ bool YoYoWiFiManager::setMode(yy_mode_t mode) {
   if(mode != currentMode) {
     if(currentMode == YY_MODE_PEER_SERVER) {
       WiFi.softAPdisconnect(true);
+      dnsServer.stop();
     }
 
     switch(mode) {
@@ -328,11 +342,14 @@ void YoYoWiFiManager::handleRequest(AsyncWebServerRequest *request) {
     else if (SPIFFS_ENABLED && SPIFFS.exists(request->url())) {
       sendFile(request, request->url());
     }
+    else if (currentMode == YY_MODE_PEER_SERVER) {
+      handleCaptivePortalRequest(request);
+    }
     else if(request->url().equals("/")) {
       sendIndexFile(request);
     }
-    else if (currentMode == YY_MODE_PEER_SERVER) {
-      handleCaptivePortalRequest(request);
+    else if(request->url().endsWith("/")) {
+      sendFile(request, request->url() + "index.html");
     }
     else {
       request->send(404);
@@ -444,9 +461,12 @@ void YoYoWiFiManager::onYoYoCommandGET(AsyncWebServerRequest *request) {
   }
 
   if(success) {
-    String jsonString;
-    serializeJson(settingsJsonDoc, jsonString);
-    response->print(jsonString);
+    if(!settingsJsonDoc.isNull()) {
+      String jsonString;
+      serializeJson(settingsJsonDoc, jsonString);
+      response->print(jsonString);
+    }
+    else response->print("{}");
 
     request->send(response);
   }
@@ -558,10 +578,10 @@ void YoYoWiFiManager::getPeersAsJson(JsonDocument& jsonDoc) {
       }
   }
   else if(currentMode == YY_MODE_PEER_CLIENT) {
-    //TODO
+    //TODO - reques from server?
   }
   else if(currentMode == YY_MODE_CLIENT) {
-    //TODO
+    //TODO - empty?
   }
 
   delete ipAddress;
@@ -572,9 +592,52 @@ int YoYoWiFiManager::updatePeerList() {
   int count = 0;
 
   if(currentMode == YY_MODE_PEER_SERVER) {
-    esp_wifi_ap_get_sta_list(&wifi_sta_list);
-    tcpip_adapter_get_sta_list(&wifi_sta_list, &adapter_sta_list);
-    count = adapter_sta_list.num;
+    #if defined(ESP8266)
+      /*
+      wifi_softap_get_station_num();
+      wifi_softap_get_station_info();
+
+      unsigned char number_client;
+      struct station_info *stat_info;
+
+      struct ip4_addr *IPaddress;
+      IPAddress address;
+      int i=1;
+
+      number_client= wifi_softap_get_station_num(); // Count of stations which are connected to ESP8266 soft-AP
+      stat_info = wifi_softap_get_station_info();
+
+      Serial.print(" Total connected_client are = ");
+      Serial.println(number_client);
+
+      while (stat_info != NULL) {
+        IPaddress = &stat_info->ip;
+        address = IPaddress->addr;
+
+        Serial.print("client= ");
+
+        Serial.print(i);
+        Serial.print(" ip adress is = ");
+        Serial.print((address));
+        Serial.print(" with mac adress is = ");
+
+        Serial.print(stat_info->bssid[0],HEX);
+        Serial.print(stat_info->bssid[1],HEX);
+        Serial.print(stat_info->bssid[2],HEX);
+        Serial.print(stat_info->bssid[3],HEX);
+        Serial.print(stat_info->bssid[4],HEX);
+        Serial.print(stat_info->bssid[5],HEX);
+
+        stat_info = STAILQ_NEXT(stat_info, next);
+        i++;
+        Serial.println();
+      }
+      */
+    #elif defined(ESP32)
+      esp_wifi_ap_get_sta_list(&wifi_sta_list);
+      tcpip_adapter_get_sta_list(&wifi_sta_list, &adapter_sta_list);
+      count = adapter_sta_list.num;
+    #endif
   }
   else if(currentMode == YY_MODE_PEER_CLIENT) {
     //TODO
@@ -608,12 +671,15 @@ bool YoYoWiFiManager::getPeerN(int n, char *ipAddress, char *macAddress, bool un
   bool success = false;
 
   if(unchecked || (n >=0 && n < updatePeerList())) {
-    tcpip_adapter_sta_info_t station = adapter_sta_list.sta[n];
+    #if defined(ESP8266)
+    #elif defined(ESP32)
+      tcpip_adapter_sta_info_t station = adapter_sta_list.sta[n];
 
-    if(ipAddress != NULL)   strcpy(ipAddress, ip4addr_ntoa(&(station.ip)));
-    if(macAddress != NULL)  mac_addr_to_c_str(station.mac, macAddress);
+      if(ipAddress != NULL)   strcpy(ipAddress, ip4addr_ntoa(&(station.ip)));
+      if(macAddress != NULL)  mac_addr_to_c_str(station.mac, macAddress);
 
-    success = true;
+      success = true;
+    #endif
   }
 
   return(success);

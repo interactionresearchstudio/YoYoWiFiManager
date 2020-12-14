@@ -108,8 +108,11 @@ class YoYoWiFiManager : public AsyncWebHandler {
     int updatePeerList();
     bool getPeerN(int n, char *ipAddress, char *macAddress, bool unchecked = false);
 
-    wifi_sta_list_t wifi_sta_list;
-    tcpip_adapter_sta_list_t adapter_sta_list;
+    #if defined(ESP8266)
+    #elif defined(ESP32)
+      wifi_sta_list_t wifi_sta_list;
+      tcpip_adapter_sta_list_t adapter_sta_list;
+    #endif
 
     void makePOST(const char *server, const char *path, JsonVariant json);
 
