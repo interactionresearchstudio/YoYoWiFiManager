@@ -95,18 +95,21 @@ class YoYoWiFiManager : public AsyncWebHandler {
     void addKnownNetworks();
     bool addNetwork(char const *ssid, char const *password, bool autosave = true);
 
-    String getNetworksAsJsonString();
-    void getNetworksAsJson(JsonDocument& jsonDoc);
-
     yy_mode_t createPeerNetwork();
     bool joinPeerNetworkAsClient();
     void joinPeerNetworkAsServer();
 
+    String getNetworksAsJsonString();
+    void getNetworksAsJson(JsonDocument& jsonDoc);
+
+    String getClientsAsJsonString();
+    void getClientsAsJson(JsonDocument& jsonDoc);
+
     String getPeersAsJsonString();
     void getPeersAsJson(JsonDocument& jsonDoc);
 
-    int updatePeerList();
-    bool getPeerN(int n, char *ipAddress, char *macAddress, bool unchecked = false);
+    int updateClientList();
+    bool getPeerN(int n, char *ipAddress, char *macAddress);
 
     #if defined(ESP8266)
     #elif defined(ESP32)
@@ -146,9 +149,11 @@ class YoYoWiFiManager : public AsyncWebHandler {
     void onYoYoCommandPOST(AsyncWebServerRequest *request, JsonVariant json);
 
     void getNetworks(AsyncWebServerRequest * request);
+    void getClients(AsyncWebServerRequest * request);
     void getPeers(AsyncWebServerRequest * request);
 
     int countPeers();
+    bool hasClients();
     int countClients();
 
     void getCredentials(AsyncWebServerRequest *request);

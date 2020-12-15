@@ -334,9 +334,10 @@ void YoYoWiFiManager::handleRequest(AsyncWebServerRequest *request) {
 
   if (request->method() == HTTP_GET) {
     if(request->url().startsWith("/yoyo")) {
-      if (request->url() == "/yoyo/networks")    getNetworks(request);
-      else if (request->url() == "/yoyo/peers")  getPeers(request);
-      else if (request->url() == "/yoyo/credentials")  getCredentials(request);
+      if (request->url() == "/yoyo/networks")         getNetworks(request);
+      else if (request->url() == "/yoyo/clients")     getClients(request);
+      else if (request->url() == "/yoyo/peers")       getPeers(request);
+      else if (request->url() == "/yoyo/credentials") getCredentials(request);
       else onYoYoCommandGET(request);
     }
     else if (SPIFFS_ENABLED && SPIFFS.exists(request->url())) {
@@ -483,11 +484,11 @@ void YoYoWiFiManager::onYoYoCommandPOST(AsyncWebServerRequest *request, JsonVari
   }
 
   if(currentMode == YY_MODE_PEER_SERVER) {
-    int peerCount = updatePeerList();
+    int peerCount = updateClientList();
 
     char *ipAddress = new char[17];
     for (int i = 0; i < peerCount; i++) {
-      getPeerN(i, ipAddress, NULL, true);
+      getPeerN(i, ipAddress, NULL);
       Serial.printf("POST to: %s\n", ipAddress);
       makePOST(ipAddress, request->url().c_str(), json);
     }
@@ -567,15 +568,22 @@ void YoYoWiFiManager::getPeersAsJson(JsonDocument& jsonDoc) {
   char *macAddress = new char[18];
 
   if(currentMode == YY_MODE_PEER_SERVER) {
-      int peerCount = updatePeerList();
+      #if defined(ESP8266)
+        //TODO
+      #elif defined(ESP32)
+        wifi_sta_list_t wifi_sta_list;
+        tcpip_adapter_sta_list_t adapter_sta_list;
 
-      for (int i = 0; i < peerCount; i++) {
-        getPeerN(i, ipAddress, macAddress, true);
-    
-        JsonObject peer  = peers.createNestedObject();
-        peer["IP"] = ipAddress;
-        peer["MAC"] = macAddress;   
-      }
+        int peerCount = countPeers();
+
+        for (int i = 0; i < peerCount; i++) {
+          getPeerN(i, ipAddress, macAddress);
+      
+          JsonObject peer  = peers.createNestedObject();
+          peer["IP"] = ipAddress;
+          peer["MAC"] = macAddress;   
+        }
+      #endif
   }
   else if(currentMode == YY_MODE_PEER_CLIENT) {
     //TODO - reques from server?
@@ -588,7 +596,58 @@ void YoYoWiFiManager::getPeersAsJson(JsonDocument& jsonDoc) {
   delete macAddress;
 }
 
-int YoYoWiFiManager::updatePeerList() {
+void YoYoWiFiManager::getClients(AsyncWebServerRequest * request) {
+  AsyncResponseStream *response = request->beginResponseStream("application/json");
+
+  response->print(getClientsAsJsonString());
+  request->send(response);
+}
+
+String YoYoWiFiManager::getClientsAsJsonString() {
+  String jsonString;
+
+  StaticJsonDocument<1000> jsonDoc;
+  getClientsAsJson(jsonDoc);
+  serializeJson(jsonDoc[0], jsonString);
+
+  return (jsonString);
+}
+
+void YoYoWiFiManager::getClientsAsJson(JsonDocument& jsonDoc) {
+  JsonArray clients = jsonDoc.createNestedArray();
+ 
+  char *ipAddress = new char[17];
+  char *macAddress = new char[18];
+
+  if(currentMode == YY_MODE_PEER_SERVER) {
+       #if defined(ESP8266)
+        //TODO
+      #elif defined(ESP32)
+        tcpip_adapter_sta_info_t station;
+
+        int clientCount = updateClientList();
+        for(int n = 0; n < clientCount; ++n) {
+          strcpy(ipAddress, ip4addr_ntoa(&(adapter_sta_list.sta[n].ip)));
+          mac_addr_to_c_str(adapter_sta_list.sta[n].mac, macAddress);
+
+          JsonObject client  = clients.createNestedObject();
+          client["IP"] = ipAddress;
+          client["MAC"] = macAddress; 
+        }
+      #endif
+  }
+  else if(currentMode == YY_MODE_PEER_CLIENT) {
+    //TODO - reques from server?
+  }
+  else if(currentMode == YY_MODE_CLIENT) {
+    //TODO - empty?
+  }
+
+  delete ipAddress;
+  delete macAddress;
+}
+
+int YoYoWiFiManager::updateClientList() {
   int count = 0;
 
   if(currentMode == YY_MODE_PEER_SERVER) {
@@ -652,35 +711,60 @@ int YoYoWiFiManager::updatePeerList() {
 int YoYoWiFiManager::countPeers() {
   int count = 0;
 
-  //TODO
+  #if defined(ESP8266)
+  #elif defined(ESP32)
+    tcpip_adapter_sta_info_t station;
+    char *thisMacAddress = new char[18];
+    int clientCount = countClients();
+    for(int n = 0; n < clientCount; ++n) {
+      station = adapter_sta_list.sta[n];
+      mac_addr_to_c_str(station.mac, thisMacAddress);
+      if(isEspressif(thisMacAddress)) count++;
+    }
+    delete thisMacAddress;
+  #endif
 
   return(count);
+}
+
+bool YoYoWiFiManager::hasClients() {
+  return(countClients() > 0);
 }
 
 int YoYoWiFiManager::countClients() {
   int count = 0;
 
   if(currentMode == YY_MODE_PEER_SERVER) {
-    count = updatePeerList();
+    count = updateClientList();
   }
 
   return(count);
 }
 
-bool YoYoWiFiManager::getPeerN(int n, char *ipAddress, char *macAddress, bool unchecked) {
+bool YoYoWiFiManager::getPeerN(int n, char *ipAddress, char *macAddress) {
   bool success = false;
 
-  if(unchecked || (n >=0 && n < updatePeerList())) {
-    #if defined(ESP8266)
-    #elif defined(ESP32)
-      tcpip_adapter_sta_info_t station = adapter_sta_list.sta[n];
+  #if defined(ESP8266)
 
-      if(ipAddress != NULL)   strcpy(ipAddress, ip4addr_ntoa(&(station.ip)));
-      if(macAddress != NULL)  mac_addr_to_c_str(station.mac, macAddress);
-
-      success = true;
-    #endif
-  }
+  #elif defined(ESP32)
+    tcpip_adapter_sta_info_t station;
+    char *thisMacAddress = new char[18];
+    int clientCount = countClients();
+    int peerCount = 0;
+    for(int i = 0; i < clientCount && !success; ++i) {
+      station = adapter_sta_list.sta[i];
+      mac_addr_to_c_str(station.mac, thisMacAddress);
+      if(isEspressif(thisMacAddress)) {
+        success = (peerCount == n);
+        if(success) {
+          if(ipAddress != NULL)   strcpy(ipAddress, ip4addr_ntoa(&(station.ip)));
+          if(macAddress != NULL)  mac_addr_to_c_str(station.mac, macAddress);
+        }
+        peerCount++;
+      }
+    }
+    delete thisMacAddress;
+  #endif
 
   return(success);
 }
@@ -724,7 +808,7 @@ bool YoYoWiFiManager::isEspressif(char *macAddress) {
   bool result = false;
 
   int oui = getOUI(macAddress);
-  int count = sizeof(ESPRESSIF_OUI);
+  int count = sizeof(ESPRESSIF_OUI) > 0 ? sizeof(ESPRESSIF_OUI)/sizeof(ESPRESSIF_OUI[0]) : 0;
 
   for(int n=0; n < count && !result; ++n) {
     result = (oui == ESPRESSIF_OUI[n]);
