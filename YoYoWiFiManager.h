@@ -26,7 +26,7 @@
 #include "index_html.h"
 
 #define SSID_MAX_LENGTH 31
-#define WIFICONNECTTIMEOUT 60000
+#define WIFICONNECTTIMEOUT 20000
 #define MAX_NETWORKS_TO_SCAN 5
 
 class YoYoWiFiManager : public AsyncWebHandler {
@@ -65,7 +65,6 @@ class YoYoWiFiManager : public AsyncWebHandler {
     char peerNetworkPassword[64];
     
     yy_status_t currentStatus = YY_IDLE_STATUS;
-    void onStatusChanged();
 
     const byte DNS_PORT = 53;
     DNSServer dnsServer;
@@ -75,7 +74,7 @@ class YoYoWiFiManager : public AsyncWebHandler {
     AsyncWebServer *webserver = NULL;
     bool startWebServerOnceConnected = false;
 
-    long clientTimeOutAtMs = -1;
+    uint32_t clientTimeOutAtMs = 0;
 
     YoYoWiFiManagerSettings *settings = NULL;
     uint8_t wifiLEDPin;
@@ -89,15 +88,11 @@ class YoYoWiFiManager : public AsyncWebHandler {
     void startWebServer();
     void stopWebServer();
 
-    yy_mode_t updateMode();
-    uint8_t updateStatus();
-
+    void addPeerNetwork(char *ssid, char *password);
     void addKnownNetworks();
     bool addNetwork(char const *ssid, char const *password, bool autosave = true);
-
-    yy_mode_t createPeerNetwork();
-    bool joinPeerNetworkAsClient();
-    void joinPeerNetworkAsServer();
+;
+    void startPeerNetworkAsAP();
 
     String getNetworksAsJsonString();
     void getNetworksAsJson(JsonDocument& jsonDoc);
@@ -127,7 +122,6 @@ class YoYoWiFiManager : public AsyncWebHandler {
 
     void init(YoYoWiFiManagerSettings *settings, callbackPtr getHandler = NULL, callbackPtr postHandler = NULL, bool startWebServerOnceConnected = false, int webServerPort = 80, uint8_t wifiLEDPin = 2);
     boolean begin(char const *apName, char const *apPassword = NULL, bool autoconnect = false);
-    void setPeerNetworkCredentials(char *ssid, char *password);
     void connect();
 
     void blinkWiFiLED(int count);
@@ -135,6 +129,7 @@ class YoYoWiFiManager : public AsyncWebHandler {
     bool findNetwork(char const *ssid, char *matchingSSID, bool autocomplete = false, bool autocorrect = false, int autocorrectError = 0);
 
     uint8_t update();
+    yy_status_t getStatus();
 
     //AsyncWebHandler:
     bool canHandle(AsyncWebServerRequest *request);
@@ -152,6 +147,7 @@ class YoYoWiFiManager : public AsyncWebHandler {
     void getClients(AsyncWebServerRequest * request);
     void getPeers(AsyncWebServerRequest * request);
 
+    bool hasPeers();
     int countPeers();
     bool hasClients();
     int countClients();
@@ -161,7 +157,8 @@ class YoYoWiFiManager : public AsyncWebHandler {
     bool setCredentials(JsonVariant json);
 
     bool isEspressif(char *macAddress);
-    
+
+    void printMode(yy_mode_t mode);
   private:
     bool mac_addr_to_c_str(uint8_t *mac, char *str);
     int getOUI(char *mac);
