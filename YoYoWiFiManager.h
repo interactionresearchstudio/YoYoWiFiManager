@@ -26,8 +26,24 @@
 #include "index_html.h"
 
 #define SSID_MAX_LENGTH 31
-#define WIFICONNECTTIMEOUT 20000
+#define WIFICLIENTTIMEOUT 20000
+#define WIFISERVERTIMEOUT 60000
 #define MAX_NETWORKS_TO_SCAN 5
+
+typedef enum {
+  //compatibility with wl_status_t (wl_definitions.h)
+  YY_NO_SHIELD        = WL_NO_SHIELD,
+  YY_IDLE_STATUS      = WL_IDLE_STATUS,
+  YY_NO_SSID_AVAIL    = WL_NO_SSID_AVAIL,
+  YY_SCAN_COMPLETED   = WL_SCAN_COMPLETED,
+  YY_CONNECTED        = WL_CONNECTED,
+  YY_CONNECT_FAILED   = WL_CONNECT_FAILED,
+  YY_CONNECTION_LOST  = WL_CONNECTION_LOST,
+  YY_DISCONNECTED     = WL_DISCONNECTED,
+  //yo-yo specific:
+  YY_CONNECTED_PEER_CLIENT,
+  YY_CONNECTED_PEER_SERVER
+} yy_status_t;
 
 class YoYoWiFiManager : public AsyncWebHandler {
   public:
@@ -38,21 +54,6 @@ class YoYoWiFiManager : public AsyncWebHandler {
     YY_MODE_PEER_SERVER
   } yy_mode_t;
   yy_mode_t currentMode = YY_MODE_NONE;
-
-  typedef enum {
-    //compatibility with wl_status_t (wl_definitions.h)
-    YY_NO_SHIELD        = WL_NO_SHIELD,
-    YY_IDLE_STATUS      = WL_IDLE_STATUS,
-    YY_NO_SSID_AVAIL    = WL_NO_SSID_AVAIL,
-    YY_SCAN_COMPLETED   = WL_SCAN_COMPLETED,
-    YY_CONNECTED        = WL_CONNECTED,
-    YY_CONNECT_FAILED   = WL_CONNECT_FAILED,
-    YY_CONNECTION_LOST  = WL_CONNECTION_LOST,
-    YY_DISCONNECTED     = WL_DISCONNECTED,
-    //yo-yo specific:
-    YY_CONNECTED_PEER_CLIENT,
-    YY_CONNECTED_PEER_SERVER
-  } yy_status_t;
 
   private:
     #if defined(ESP8266)
@@ -75,6 +76,12 @@ class YoYoWiFiManager : public AsyncWebHandler {
     bool startWebServerOnceConnected = false;
 
     uint32_t clientTimeOutAtMs = 0;
+    void updateClientTimeOut();
+    bool clientHasTimedOut();
+
+    uint32_t serverTimeOutAtMs = 0;
+    void updateServerTimeOut();
+    bool serverHasTimedOut();
 
     YoYoWiFiManagerSettings *settings = NULL;
     uint8_t wifiLEDPin;
@@ -115,8 +122,8 @@ class YoYoWiFiManager : public AsyncWebHandler {
     void makePOST(const char *server, const char *path, JsonVariant json);
 
     bool setMode(yy_mode_t mode);
-    void updateClientTimeOut();
 
+    void printModeAndStatus();
   public:
     YoYoWiFiManager();
 
@@ -157,8 +164,6 @@ class YoYoWiFiManager : public AsyncWebHandler {
     bool setCredentials(JsonVariant json);
 
     bool isEspressif(char *macAddress);
-
-    void printMode(yy_mode_t mode);
   private:
     bool mac_addr_to_c_str(uint8_t *mac, char *str);
     int getOUI(char *mac);

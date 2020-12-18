@@ -145,16 +145,21 @@ bool YoYoWiFiManager::findNetwork(char const *ssid, char *matchingSSID, bool aut
   return(result);
 }
 
-YoYoWiFiManager::yy_status_t YoYoWiFiManager::getStatus() {
+yy_status_t YoYoWiFiManager::getStatus() {
   uint8_t wlStatus = (currentMode == YY_MODE_PEER_SERVER) ?  WiFi.status() : wifiMulti.run();
-  yy_status_t yyStatus = YY_IDLE_STATUS;
+  yy_status_t yyStatus = currentStatus;
 
   if(wlStatus == WL_CONNECTED) {
     switch(currentMode) {
       case YY_MODE_CLIENT:      yyStatus = YY_CONNECTED; break;
       case YY_MODE_PEER_CLIENT: yyStatus = YY_CONNECTED_PEER_CLIENT; break;
-      case YY_MODE_PEER_SERVER: yyStatus = YY_CONNECTED_PEER_SERVER; break;
     }
+  }
+  else if(currentMode == YY_MODE_PEER_SERVER && hasClients()) {
+    yyStatus = YY_CONNECTED_PEER_SERVER;
+  }
+  else if(currentMode == WL_IDLE_STATUS) {
+    //Suspress WL_IDLE_STATUS
   }
   else {
     yyStatus = (yy_status_t) wlStatus;  //Otherwise yy_status_t and wl_status_t are value compatible
@@ -188,10 +193,14 @@ uint8_t YoYoWiFiManager::update() {
       //implicitly in YY_MODE_PEER_SERVER
       case YY_CONNECTED_PEER_SERVER:
       break;
+      case YY_CONNECTION_LOST:
+        setMode(YY_MODE_CLIENT);
+      break;
       case YY_DISCONNECTED:
       break;
     }
     currentStatus = yyStatus;
+    printModeAndStatus();
   }
 
   //Everytime for each status:
@@ -206,11 +215,21 @@ uint8_t YoYoWiFiManager::update() {
     break;
     //implicitly in YY_MODE_PEER_SERVER
     case YY_CONNECTED_PEER_SERVER:
+      if(hasClients()) updateServerTimeOut();
+    break;
+    case YY_CONNECTION_LOST:
+      if(currentMode != YY_MODE_PEER_SERVER && clientHasTimedOut())
+        setMode(YY_MODE_PEER_SERVER);
+
+      if(currentMode != YY_MODE_CLIENT && serverHasTimedOut() && settings && settings -> hasNetworkCredentials())
+        setMode(YY_MODE_CLIENT);
     break;
     case YY_DISCONNECTED:
-      if(clientTimeOutAtMs > 0 && millis() > clientTimeOutAtMs) {
+      if(currentMode != YY_MODE_PEER_SERVER && clientHasTimedOut())
         setMode(YY_MODE_PEER_SERVER);
-      }
+
+      if(currentMode != YY_MODE_CLIENT && serverHasTimedOut() && settings && settings -> hasNetworkCredentials())
+        setMode(YY_MODE_CLIENT);
     break;
   }
 
@@ -220,13 +239,13 @@ uint8_t YoYoWiFiManager::update() {
       digitalWrite(wifiLEDPin, LOW);
       break;
     case YY_MODE_CLIENT:
-      digitalWrite(wifiLEDPin, currentStatus != YY_CONNECTED);
+      digitalWrite(wifiLEDPin, LOW);
       break;
     case YY_MODE_PEER_CLIENT:
-      digitalWrite(wifiLEDPin, ((millis()/1000)%2) == 0);
+      digitalWrite(wifiLEDPin, HIGH);
       break;
     case YY_MODE_PEER_SERVER:
-      digitalWrite(wifiLEDPin, ((millis()/1000)%2) == 0);
+      digitalWrite(wifiLEDPin, HIGH);
       dnsServer.processNextRequest();
       break;
   }
@@ -264,38 +283,82 @@ bool YoYoWiFiManager::setMode(yy_mode_t mode) {
         startWebServer();
         break;
       case YY_MODE_PEER_SERVER:
+        updateServerTimeOut();
         startPeerNetworkAsAP();
         startWebServer();
         break;
     }
     
     currentMode = mode;
-    printMode(currentMode);
+    printModeAndStatus();
   }
 
   return(result);
 }
 
-void YoYoWiFiManager::printMode(yy_mode_t mode) {
-  switch(mode) {
+void YoYoWiFiManager::printModeAndStatus() {
+  switch(currentMode) {
     case YY_MODE_NONE:
-      Serial.println("YY_MODE_NONE");
+      Serial.print("YY_MODE_NONE");
       break;
     case YY_MODE_CLIENT:
-      Serial.println("YY_MODE_CLIENT");
+      Serial.print("YY_MODE_CLIENT");
       break;
     case YY_MODE_PEER_CLIENT: 
-      Serial.println("YY_MODE_PEER_CLIENT");
+      Serial.print("YY_MODE_PEER_CLIENT");
       break;
     case YY_MODE_PEER_SERVER:
-      Serial.println("YY_MODE_PEER_SERVER");
+      Serial.print("YY_MODE_PEER_SERVER");
+      break;
+  }
+
+  switch (currentStatus) {
+    case YY_CONNECTED:
+      Serial.println("\tYY_CONNECTED");
+      break;
+    case YY_IDLE_STATUS:
+      Serial.println("\tYY_IDLE_STATUS");
+      break;
+    case YY_NO_SSID_AVAIL:
+      Serial.println("\tYY_NO_SSID_AVAIL");
+      break;
+    case YY_SCAN_COMPLETED:
+      Serial.println("\tYY_SCAN_COMPLETED");
+      break;
+    case YY_CONNECT_FAILED:
+      Serial.println("\tYY_CONNECT_FAILED");
+      break;
+    case YY_CONNECTION_LOST:
+      Serial.println("\tYY_CONNECTION_LOST");
+      break;
+    case YY_DISCONNECTED:
+      Serial.println("\tYY_DISCONNECTED");
+      break;
+    case YY_CONNECTED_PEER_CLIENT:
+      Serial.println("\tYY_CONNECTED_PEER_CLIENT");
+      break;
+    case YY_CONNECTED_PEER_SERVER:
+      Serial.println("\tYY_CONNECTED_PEER_SERVER");
       break;
   }
 }
 
-void YoYoWiFiManager::updateClientTimeOut() {
-  clientTimeOutAtMs = millis() + WIFICONNECTTIMEOUT;
+bool YoYoWiFiManager::clientHasTimedOut() {
+  return(clientTimeOutAtMs > 0 && millis() > clientTimeOutAtMs);
 }
+
+void YoYoWiFiManager::updateClientTimeOut() {
+  clientTimeOutAtMs = millis() + WIFICLIENTTIMEOUT;
+}
+
+bool YoYoWiFiManager::serverHasTimedOut() {
+  return(serverTimeOutAtMs > 0 && millis() > serverTimeOutAtMs);
+}
+
+void YoYoWiFiManager::updateServerTimeOut() {
+  serverTimeOutAtMs = millis() + WIFISERVERTIMEOUT;
+}
+
 
 void YoYoWiFiManager::blinkWiFiLED(int count) {
   for (byte i = 0; i < count; i++) {
