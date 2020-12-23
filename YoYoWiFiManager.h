@@ -9,6 +9,7 @@
 #if defined(ESP8266)
   #include <ESP8266WiFiMulti.h>
   #include <ESPAsyncTCP.h>      //not currently available via Library Manager > https://github.com/me-no-dev/ESPAsyncTCP
+  #include <ESP8266HTTPClient.h>
   #include <FS.h>
 #elif defined(ESP32)
   #include <HTTPClient.h>
