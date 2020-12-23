@@ -29,6 +29,7 @@
 #define WIFICLIENTTIMEOUT 20000
 #define WIFISERVERTIMEOUT 60000
 #define MAX_NETWORKS_TO_SCAN 5
+#define MAX_SYNC_DELAY 3000
 
 typedef enum {
   //compatibility with wl_status_t (wl_definitions.h)
@@ -149,6 +150,7 @@ class YoYoWiFiManager : public AsyncWebHandler {
 
     void onYoYoCommandGET(AsyncWebServerRequest *request);
     void onYoYoCommandPOST(AsyncWebServerRequest *request, JsonVariant json);
+    void broadcastToPeersPOST(AsyncWebServerRequest *request, JsonVariant json);
 
     void getNetworks(AsyncWebServerRequest * request);
     void getClients(AsyncWebServerRequest * request);
@@ -160,7 +162,7 @@ class YoYoWiFiManager : public AsyncWebHandler {
     int countClients();
 
     void getCredentials(AsyncWebServerRequest *request);
-    void setCredentials(AsyncWebServerRequest *request, JsonVariant json);
+    bool setCredentials(AsyncWebServerRequest *request, JsonVariant json);
     bool setCredentials(JsonVariant json);
 
     bool isEspressif(char *macAddress);
