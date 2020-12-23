@@ -9,7 +9,7 @@ function init() {
     $('#networks-list-select').attr('disabled', true);
     $('#password').attr('disabled', true);
 
-    $.getJSON('/yoyo/settings', function (json) {
+    $.getJSON('/yoyo/credentials', function (json) {
         $('#config').show();
         configure(json);
     });
@@ -64,7 +64,7 @@ function onSaveButtonClicked(event) {
     //NB dataType is 'text' otherwise json validation fails on Safari
     $.ajax({
         type: "POST",
-        url: "/yoyo/settings",
+        url: "/yoyo/credentials",
         data: JSON.stringify(data),
         dataType: 'text',
         contentType: 'application/json; charset=utf-8',
@@ -79,8 +79,6 @@ function onSaveButtonClicked(event) {
             $('#alert-text').addClass('alert-success');
             $('#alert-text').text('Saved');
             $('#nextstep').show();
-
-            //reboot(10000);
         },
         error: function (jqXHR, textStatus, errorThrown) {
             console.log(jqXHR);
