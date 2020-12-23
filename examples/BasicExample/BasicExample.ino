@@ -51,6 +51,7 @@ bool onYoYoCommandPOST(const String &url, JsonVariant json) {
   serializeJson(json, Serial);
 
   if(url.equals("/yoyo/settings")) {
+    //an alternative to using the built-in /yoyo/credentials...
     success = wifiManager.setCredentials(json);
     if(success) wifiManager.connect();
 
