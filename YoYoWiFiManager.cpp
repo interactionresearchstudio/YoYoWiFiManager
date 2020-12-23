@@ -28,6 +28,7 @@ void YoYoWiFiManager::init(YoYoWiFiManagerSettings *settings, callbackPtr getHan
 
 boolean YoYoWiFiManager::begin(char const *apName, char const *apPassword, bool autoconnect) {
   addPeerNetwork((char *)apName, (char *)apPassword);
+  wifiMulti.run();  //prioritise joining peer networks over known networks
 
   if(autoconnect && settings && settings -> hasNetworkCredentials()) {
     Serial.println("network credentials available");
@@ -35,7 +36,7 @@ boolean YoYoWiFiManager::begin(char const *apName, char const *apPassword, bool 
     setMode(YY_MODE_CLIENT);
   }
   else {
-    setMode(YY_MODE_PEER_CLIENT); //Attempt to join peer network;
+    setMode(YY_MODE_PEER_CLIENT); //attempt to join peer network;
   }
 
   return(true);
@@ -384,11 +385,7 @@ void YoYoWiFiManager::handleRequest(AsyncWebServerRequest *request) {
 
   if (request->method() == HTTP_GET) {
     if(request->url().startsWith("/yoyo")) {
-      if (request->url() == "/yoyo/networks")         getNetworks(request);
-      else if (request->url() == "/yoyo/clients")     getClients(request);
-      else if (request->url() == "/yoyo/peers")       getPeers(request);
-      else if (request->url() == "/yoyo/credentials") getCredentials(request);
-      else onYoYoCommandGET(request);
+      onYoYoCommandGET(request);
     }
     else if (SPIFFS_ENABLED && SPIFFS.exists(request->url())) {
       sendFile(request, request->url());
@@ -448,10 +445,7 @@ void YoYoWiFiManager::handleBody(AsyncWebServerRequest * request, uint8_t *data,
 
       StaticJsonDocument<1024> jsonDoc;
       if (!deserializeJson(jsonDoc, json)) {
-        if (request->url() == "/yoyo/credentials")  setCredentials(request, jsonDoc.as<JsonVariant>());
-        else {
-          onYoYoCommandPOST(request, jsonDoc.as<JsonVariant>());
-        }
+        onYoYoCommandPOST(request, jsonDoc.as<JsonVariant>());
       }
     }
     else {
@@ -504,80 +498,97 @@ String YoYoWiFiManager::getContentType(String filename) {
 void YoYoWiFiManager::onYoYoCommandGET(AsyncWebServerRequest *request) {
   bool success = false;
 
-  AsyncResponseStream *response = request->beginResponseStream("application/json");
-
-  StaticJsonDocument<1024> settingsJsonDoc;
-  if(yoYoCommandGetHandler) {
-    success = yoYoCommandGetHandler(request->url(), settingsJsonDoc.as<JsonVariant>());
-  }
-
-  if(success) {
-    if(!settingsJsonDoc.isNull()) {
-      String jsonString;
-      serializeJson(settingsJsonDoc, jsonString);
-      response->print(jsonString);
-    }
-    else response->print("{}");
-
-    request->send(response);
-  }
+  if (request->url().equals("/yoyo/networks"))         getNetworks(request);
+  else if (request->url().equals("/yoyo/clients"))     getClients(request);
+  else if (request->url().equals("/yoyo/peers"))       getPeers(request);
+  else if (request->url().equals("/yoyo/credentials")) getCredentials(request);
   else {
-    request->send(400);
+    AsyncResponseStream *response = request->beginResponseStream("application/json");
+
+    StaticJsonDocument<1024> settingsJsonDoc;
+    if(yoYoCommandGetHandler) {
+      success = yoYoCommandGetHandler(request->url(), settingsJsonDoc.as<JsonVariant>());
+    }
+
+    if(success) {
+      if(!settingsJsonDoc.isNull()) {
+        String jsonString;
+        serializeJson(settingsJsonDoc, jsonString);
+        response->print(jsonString);
+      }
+      else response->print("{}");
+
+      request->send(response);
+    }
+    else {
+      request->send(400);
+    }
   }
 }
 
 void YoYoWiFiManager::onYoYoCommandPOST(AsyncWebServerRequest *request, JsonVariant json) {
-  bool success = false;
-
-  if(yoYoCommandPostHandler) {
-    success = yoYoCommandPostHandler(request->url(), json);
+  if (request->url().equals("/yoyo/credentials")) {
+    if(setCredentials(request, json)) {
+      broadcastToPeersPOST(request, json);
+      delay(random(MAX_SYNC_DELAY));  //stop peers that are restarting together becoming synchronised
+      connect();
+    }
   }
+  else {
+    bool success = false;
 
+    if(yoYoCommandPostHandler) {
+      success = yoYoCommandPostHandler(request->url(), json);
+    }
+    request->send(success ? 200 : 404);
+  }
+}
+
+void YoYoWiFiManager::broadcastToPeersPOST(AsyncWebServerRequest *request, JsonVariant json) {
   if(currentMode == YY_MODE_PEER_SERVER) {
-    int peerCount = updateClientList();
+    int peerCount = countPeers();
 
     char *ipAddress = new char[17];
     for (int i = 0; i < peerCount; i++) {
       getPeerN(i, ipAddress, NULL);
-      Serial.printf("POST to: %s\n", ipAddress);
       makePOST(ipAddress, request->url().c_str(), json);
     }
     delete ipAddress;
   }
-
-  request->send(success ? 200 : 404);
 }
 
 void YoYoWiFiManager::makePOST(const char *server, const char *path, JsonVariant json) {
-  String s;
-  serializeJson(json, s);
+  String jsonAsString;
+  serializeJson(json, jsonAsString);
 
-  Serial.printf("http://%s%s > %s\n", server, path, json);
-
-  /*
-  // Serialize JSON document
-  
+  String urlAsString = "http://" + String(server) + String(path);
+  Serial.printf("%s > %s\n", urlAsString.c_str(), jsonAsString.c_str());
 
   HTTPClient http;
 
-  http.begin("http://httpbin.org/post");
-  http.POST(json);
+  http.begin(urlAsString);
+  http.POST(jsonAsString);
 
   // Read response
-  //Serial.print(http.getString());
+  Serial.print(http.getString());
 
   http.end();
-  */
 }
 
 void YoYoWiFiManager::getCredentials(AsyncWebServerRequest *request) {
   //TODO: get all the credentials and turn them into json - but not passwords
+  AsyncResponseStream *response = request->beginResponseStream("application/json");
+  response->print("{}");
+  //serializeJson(settings["credentials"], Serial);
 
-  request->send(200);
+  request->send(response);
 }
 
-void YoYoWiFiManager::setCredentials(AsyncWebServerRequest *request, JsonVariant json) {
-  request->send(setCredentials(json) ? 200 : 400);
+bool YoYoWiFiManager::setCredentials(AsyncWebServerRequest *request, JsonVariant json) {
+  bool success = setCredentials(json);
+  request->send(success ? 200 : 400);
+
+  return(success);
 }
 
 bool YoYoWiFiManager::setCredentials(JsonVariant json) {
