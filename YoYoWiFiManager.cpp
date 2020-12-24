@@ -706,8 +706,6 @@ int YoYoWiFiManager::updateClientList() {
   if(currentMode == YY_MODE_PEER_SERVER) {
     #if defined(ESP8266)
       struct station_info *stat_info;
-      struct ip4_addr *IPaddress;
-      IPAddress address;
 
       count = min(wifi_softap_get_station_num(), (uint8) ESP_WIFI_MAX_CONN_NUM);
       stat_info = wifi_softap_get_station_info();
@@ -717,34 +715,13 @@ int YoYoWiFiManager::updateClientList() {
       int n=0;
       tcpip_adapter_sta_info_t station;
       while (count > 0 && stat_info != NULL) {
-        station = adapter_sta_list.sta[n];
-
-        //uint8_t mac[6];
-        //ip4_addr_t ip;
-
-        //strcpy(ipAddress, ip4addr_ntoa(&(adapter_sta_list.sta[n].ip)));
-        //mac_addr_to_c_str(adapter_sta_list.sta[n].mac, macAddress);
-
-        // IPaddress = &stat_info->ip;
-        // address = IPaddress->addr;
-
-        // Serial.print((address));
-        // Serial.print("\t");
-
-        // Serial.print(stat_info->bssid[0],HEX);
-        // Serial.print(stat_info->bssid[1],HEX);
-        // Serial.print(stat_info->bssid[2],HEX);
-        // Serial.print(stat_info->bssid[3],HEX);
-        // Serial.print(stat_info->bssid[4],HEX);
-        // Serial.print(stat_info->bssid[5],HEX);
-
-        // Serial.println();
+        memcpy(adapter_sta_list.sta[n].mac, stat_info->bssid, sizeof(stat_info->bssid[0])*6);
+        adapter_sta_list.sta[n].ip = stat_info->ip;
 
         stat_info = STAILQ_NEXT(stat_info, next);
         n++;
       }
       wifi_softap_free_station_info();
-      count = 0;
 
     #elif defined(ESP32)
       esp_wifi_ap_get_sta_list(&wifi_sta_list);
@@ -884,7 +861,7 @@ int YoYoWiFiManager::scanNetworks() {
     lastScanNetworksAtMs = millis();
 
     #if defined(ESP8266)
-      //ESP8266 scanNetworks() won't block and will be async because ESPAsyncWebServer > https://github.com/me-no-dev/ESPAsyncWebServer#scanning-for-available-wifi-networks
+      //ESP8266 scanNetworks() can only operate as async because of ESPAsyncWebServer > https://github.com/me-no-dev/ESPAsyncWebServer#scanning-for-available-wifi-networks
       //the consequence is that calls to function will fail to return any results if they initiate a scan
       count = WiFi.scanNetworks(true, false);
 
@@ -896,7 +873,6 @@ int YoYoWiFiManager::scanNetworks() {
   else {
     count = WiFi.scanComplete();
   }
-  count = max(0, count);
 
   return(count);
 }
