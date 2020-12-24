@@ -11,6 +11,8 @@
   #include <ESPAsyncTCP.h>      //not currently available via Library Manager > https://github.com/me-no-dev/ESPAsyncTCP
   #include <ESP8266HTTPClient.h>
   #include <FS.h>
+  #include "wifi_sta.h"
+
 #elif defined(ESP32)
   #include <HTTPClient.h>
   #include <HTTPUpdate.h>
@@ -31,6 +33,7 @@
 #define WIFISERVERTIMEOUT 60000
 #define MAX_NETWORKS_TO_SCAN 5
 #define MAX_SYNC_DELAY 3000
+#define SCAN_NETWORKS_MIN_INT 30000
 
 typedef enum {
   //compatibility with wl_status_t (wl_definitions.h)
@@ -85,6 +88,8 @@ class YoYoWiFiManager : public AsyncWebHandler {
     void updateServerTimeOut();
     bool serverHasTimedOut();
 
+    uint32_t lastScanNetworksAtMs = 0;
+
     YoYoWiFiManagerSettings *settings = NULL;
     uint8_t wifiLEDPin;
 
@@ -100,9 +105,10 @@ class YoYoWiFiManager : public AsyncWebHandler {
     void addPeerNetwork(char *ssid, char *password);
     void addKnownNetworks();
     bool addNetwork(char const *ssid, char const *password, bool autosave = true);
-;
+
     void startPeerNetworkAsAP();
 
+    int scanNetworks();
     String getNetworksAsJsonString();
     void getNetworksAsJson(JsonDocument& jsonDoc);
 
@@ -115,11 +121,10 @@ class YoYoWiFiManager : public AsyncWebHandler {
     int updateClientList();
     bool getPeerN(int n, char *ipAddress, char *macAddress);
 
-    #if defined(ESP8266)
-    #elif defined(ESP32)
+    #if defined(ESP32)
       wifi_sta_list_t wifi_sta_list;
-      tcpip_adapter_sta_list_t adapter_sta_list;
     #endif
+    tcpip_adapter_sta_list_t adapter_sta_list;
 
     void makePOST(const char *server, const char *path, JsonVariant json);
 
