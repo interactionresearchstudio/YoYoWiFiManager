@@ -9,7 +9,7 @@ function init() {
     $('#networks-list-select').attr('disabled', true);
     $('#password').attr('disabled', true);
 
-    $.getJSON('/yoyo/settings', function (json) {
+    $.getJSON('/yoyo/credentials', function (json) {
         $('#config').show();
         configure(json);
     });
@@ -45,10 +45,11 @@ function populateNetworksList(selectedNetwork) {
 
         if($('#networks-list-select option').length > 0) {
             $('#networks-list-select').attr('disabled', false);
-            $('#local_pass').attr('disabled', false);
+            $('#password').attr('disabled', false);
         }
         else {
             networks.append('<option>No Networks Found</option>');
+            setTimeout(populateNetworksList, 10000);
         }
     });
 }
@@ -57,14 +58,14 @@ function onSaveButtonClicked(event) {
     event.preventDefault();
 
     var data = {
-        local_ssid: $('#networks-list-select').children("option:selected").val(),
+        ssid: $('#networks-list-select').children("option:selected").val(),
         password: $('#password').val()
     };
 
     //NB dataType is 'text' otherwise json validation fails on Safari
     $.ajax({
         type: "POST",
-        url: "/yoyo/settings",
+        url: "/yoyo/credentials",
         data: JSON.stringify(data),
         dataType: 'text',
         contentType: 'application/json; charset=utf-8',
@@ -79,8 +80,6 @@ function onSaveButtonClicked(event) {
             $('#alert-text').addClass('alert-success');
             $('#alert-text').text('Saved');
             $('#nextstep').show();
-
-            //reboot(10000);
         },
         error: function (jqXHR, textStatus, errorThrown) {
             console.log(jqXHR);
