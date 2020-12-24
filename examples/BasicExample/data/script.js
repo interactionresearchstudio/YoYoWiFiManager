@@ -49,6 +49,7 @@ function populateNetworksList(selectedNetwork) {
         }
         else {
             networks.append('<option>No Networks Found</option>');
+            setTimeout(populateNetworksList, 10000);
         }
     });
 }
