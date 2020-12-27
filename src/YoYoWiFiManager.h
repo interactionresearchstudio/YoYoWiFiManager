@@ -135,7 +135,7 @@ class YoYoWiFiManager : public AsyncWebHandler {
     YoYoWiFiManager();
 
     void init(YoYoWiFiManagerSettings *settings, callbackPtr getHandler = NULL, callbackPtr postHandler = NULL, bool startWebServerOnceConnected = false, int webServerPort = 80, uint8_t wifiLEDPin = 2);
-    boolean begin(char const *apName, char const *apPassword = NULL, bool autoconnect = false);
+    boolean begin(char const *apName, char const *apPassword = NULL, bool autoconnect = true);
     void connect();
 
     void blinkWiFiLED(int count);
