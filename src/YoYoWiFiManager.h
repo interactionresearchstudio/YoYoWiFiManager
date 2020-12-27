@@ -11,7 +11,7 @@
   #include <ESPAsyncTCP.h>      //not currently available via Library Manager > https://github.com/me-no-dev/ESPAsyncTCP
   #include <ESP8266HTTPClient.h>
   #include <FS.h>
-  #include "wifi_sta.h"
+  #include "YoYoWiFiManager/wifi_sta.h"
 
 #elif defined(ESP32)
   #include <HTTPClient.h>
@@ -23,10 +23,10 @@
 #endif
 #include <ESPAsyncWebServer.h>
 
-#include "YoYoWiFiManagerSettings.h"
-#include "Levenshtein.h"
-#include "Espressif.h"
-#include "index_html.h"
+#include "YoYoWiFiManager/YoYoWiFiManagerSettings.h"
+#include "YoYoWiFiManager/Levenshtein.h"
+#include "YoYoWiFiManager/Espressif.h"
+#include "YoYoWiFiManager/index_html.h"
 
 #define SSID_MAX_LENGTH 31
 #define WIFICLIENTTIMEOUT 20000
