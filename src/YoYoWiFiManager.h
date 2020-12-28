@@ -61,6 +61,8 @@ class YoYoWiFiManager : public AsyncWebHandler {
   yy_mode_t currentMode = YY_MODE_NONE;
 
   private:
+    bool running = false;
+
     #if defined(ESP8266)
       ESP8266WiFiMulti wifiMulti;
     #elif defined(ESP32)
@@ -99,7 +101,6 @@ class YoYoWiFiManager : public AsyncWebHandler {
 
     typedef void (*voidCallbackPtr)();
     voidCallbackPtr onConnectedHandler = NULL;
-    bool onConnectedHandlerOnce = false;
 
     typedef bool (*jsonCallbackPtr)(const String&, JsonVariant);
     jsonCallbackPtr yoYoCommandGetHandler = NULL;
@@ -141,8 +142,8 @@ class YoYoWiFiManager : public AsyncWebHandler {
     YoYoWiFiManager();
 
     void init(YoYoWiFiManagerSettings *settings, voidCallbackPtr onConnectedHandler = NULL, jsonCallbackPtr getHandler = NULL, jsonCallbackPtr postHandler = NULL, bool startWebServerOnceConnected = false, int webServerPort = 80, uint8_t wifiLEDPin = 2);
-    void setOnConnectedHandler(voidCallbackPtr onConnectedHandler, bool once = false);
     boolean begin(char const *apName, char const *apPassword = NULL, bool autoconnect = true);
+    void end();
     void connect();
 
     uint8_t loop();

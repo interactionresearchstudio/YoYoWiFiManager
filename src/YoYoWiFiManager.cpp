@@ -5,7 +5,7 @@ YoYoWiFiManager::YoYoWiFiManager() {
 
 void YoYoWiFiManager::init(YoYoWiFiManagerSettings *settings, voidCallbackPtr onConnectedHandler, jsonCallbackPtr getHandler, jsonCallbackPtr postHandler, bool startWebServerOnceConnected, int webServerPort, uint8_t wifiLEDPin) {
   this -> settings = settings;
-  setOnConnectedHandler(onConnectedHandler, false);
+  this -> onConnectedHandler = onConnectedHandler;
   this -> yoYoCommandGetHandler = getHandler;
   this -> yoYoCommandPostHandler = postHandler;
 
@@ -26,12 +26,9 @@ void YoYoWiFiManager::init(YoYoWiFiManagerSettings *settings, voidCallbackPtr on
   peerNetworkPassword[0] = NULL;
 }
 
-void YoYoWiFiManager::setOnConnectedHandler(voidCallbackPtr onConnectedHandler, bool once) {
-  this -> onConnectedHandler = onConnectedHandler;
-  onConnectedHandlerOnce = once;
-}
-
 boolean YoYoWiFiManager::begin(char const *apName, char const *apPassword, bool autoconnect) {
+  running = true;
+
   addPeerNetwork((char *)apName, (char *)apPassword);
   wifiMulti.run();  //prioritise joining peer networks over known networks
 
@@ -45,6 +42,10 @@ boolean YoYoWiFiManager::begin(char const *apName, char const *apPassword, bool 
   }
 
   return(true);
+}
+
+void YoYoWiFiManager::end() {
+  running = false;
 }
 
 void YoYoWiFiManager::connect() {
@@ -172,61 +173,64 @@ yy_status_t YoYoWiFiManager::getStatus() {
 }
 
 uint8_t YoYoWiFiManager::loop() {
-  yy_status_t yyStatus = getStatus();
+  yy_status_t yyStatus = (yy_status_t) WiFi.status();
 
-  //Only when the status changes:
-  if(currentStatus != yyStatus) {
-    switch(yyStatus) {
-      //implicitly in YY_MODE_CLIENT
-      case YY_CONNECTED:
-        if(WiFi.SSID().equals(peerNetworkSSID)) {
-          setMode(YY_MODE_PEER_CLIENT);
-        }
-        else {
-          blinkWiFiLED(3);
-          Serial.printf("Connected to: %s\n", WiFi.SSID().c_str());
+  if(running) {
+    yyStatus = getStatus();
+
+    //Only when the status changes:
+    if(currentStatus != yyStatus) {
+      switch(yyStatus) {
+        //implicitly in YY_MODE_CLIENT
+        case YY_CONNECTED:
+          if(WiFi.SSID().equals(peerNetworkSSID)) {
+            setMode(YY_MODE_PEER_CLIENT);
+          }
+          else {
+            blinkWiFiLED(3);
+            Serial.printf("Connected to: %s\n", WiFi.SSID().c_str());
+            Serial.println(WiFi.localIP());
+          }
+          if(onConnectedHandler) {
+            onConnectedHandler();
+          }
+        break;
+        //implicitly in YY_MODE_PEER_CLIENT
+        case YY_CONNECTED_PEER_CLIENT:
+          Serial.printf("Connected to Peer Network: %s\n", WiFi.SSID().c_str());
           Serial.println(WiFi.localIP());
-        }
-        if(onConnectedHandler) {
-          onConnectedHandler();
-          if(onConnectedHandlerOnce) onConnectedHandler = NULL;
-        }
-      break;
-      //implicitly in YY_MODE_PEER_CLIENT
-      case YY_CONNECTED_PEER_CLIENT:
-        Serial.printf("Connected to Peer Network: %s\n", WiFi.SSID().c_str());
-        Serial.println(WiFi.localIP());
-      break;
-      //implicitly in YY_MODE_PEER_SERVER
-      case YY_CONNECTED_PEER_SERVER:
-      break;
-      case YY_CONNECTION_LOST:
-        setMode(YY_MODE_CLIENT);
-      break;
-      case YY_DISCONNECTED:
-      break;
+        break;
+        //implicitly in YY_MODE_PEER_SERVER
+        case YY_CONNECTED_PEER_SERVER:
+        break;
+        case YY_CONNECTION_LOST:
+          setMode(YY_MODE_CLIENT);
+        break;
+        case YY_DISCONNECTED:
+        break;
+      }
+      currentStatus = yyStatus;
+      printModeAndStatus();
     }
-    currentStatus = yyStatus;
-    printModeAndStatus();
-  }
 
-  setMode(updateTimeOuts());
+    setMode(updateTimeOuts());
 
-  //Everytime for each mode:
-  switch(currentMode) {
-    case YY_MODE_NONE:
-      digitalWrite(wifiLEDPin, LOW);
-      break;
-    case YY_MODE_CLIENT:
-      digitalWrite(wifiLEDPin, LOW);
-      break;
-    case YY_MODE_PEER_CLIENT:
-      digitalWrite(wifiLEDPin, HIGH);
-      break;
-    case YY_MODE_PEER_SERVER:
-      digitalWrite(wifiLEDPin, HIGH);
-      dnsServer.processNextRequest();
-      break;
+    //Everytime for each mode:
+    switch(currentMode) {
+      case YY_MODE_NONE:
+        digitalWrite(wifiLEDPin, LOW);
+        break;
+      case YY_MODE_CLIENT:
+        digitalWrite(wifiLEDPin, LOW);
+        break;
+      case YY_MODE_PEER_CLIENT:
+        digitalWrite(wifiLEDPin, HIGH);
+        break;
+      case YY_MODE_PEER_SERVER:
+        digitalWrite(wifiLEDPin, HIGH);
+        dnsServer.processNextRequest();
+        break;
+    }
   }
 
   return(currentStatus);
