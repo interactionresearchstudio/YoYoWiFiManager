@@ -3,8 +3,9 @@
 YoYoWiFiManager::YoYoWiFiManager() {
 }
 
-void YoYoWiFiManager::init(YoYoWiFiManagerSettings *settings, callbackPtr getHandler, callbackPtr postHandler, bool startWebServerOnceConnected, int webServerPort, uint8_t wifiLEDPin) {
+void YoYoWiFiManager::init(YoYoWiFiManagerSettings *settings, voidCallbackPtr onConnectedHandler, jsonCallbackPtr getHandler, jsonCallbackPtr postHandler, bool startWebServerOnceConnected, int webServerPort, uint8_t wifiLEDPin) {
   this -> settings = settings;
+  setOnConnectedHandler(onConnectedHandler, false);
   this -> yoYoCommandGetHandler = getHandler;
   this -> yoYoCommandPostHandler = postHandler;
 
@@ -25,6 +26,11 @@ void YoYoWiFiManager::init(YoYoWiFiManagerSettings *settings, callbackPtr getHan
   peerNetworkPassword[0] = NULL;
 }
 
+void YoYoWiFiManager::setOnConnectedHandler(voidCallbackPtr onConnectedHandler, bool once) {
+  this -> onConnectedHandler = onConnectedHandler;
+  onConnectedHandlerOnce = once;
+}
+
 boolean YoYoWiFiManager::begin(char const *apName, char const *apPassword, bool autoconnect) {
   addPeerNetwork((char *)apName, (char *)apPassword);
   wifiMulti.run();  //prioritise joining peer networks over known networks
@@ -42,7 +48,7 @@ boolean YoYoWiFiManager::begin(char const *apName, char const *apPassword, bool 
 }
 
 void YoYoWiFiManager::connect() {
-  //Once in YY_MODE_CLIENT mode - update() will trigger wifiMulti.run()
+  //Once in YY_MODE_CLIENT mode - loop() will trigger wifiMulti.run()
   setMode(YY_MODE_CLIENT);
 }
 
@@ -158,9 +164,6 @@ yy_status_t YoYoWiFiManager::getStatus() {
   else if(currentMode == YY_MODE_PEER_SERVER && hasClients()) {
     yyStatus = YY_CONNECTED_PEER_SERVER;
   }
-  else if(currentMode == WL_IDLE_STATUS) {
-    //Suspress WL_IDLE_STATUS
-  }
   else {
     yyStatus = (yy_status_t) wlStatus;  //Otherwise yy_status_t and wl_status_t are value compatible
   }
@@ -168,7 +171,7 @@ yy_status_t YoYoWiFiManager::getStatus() {
   return(yyStatus);
 }
 
-uint8_t YoYoWiFiManager::update() {
+uint8_t YoYoWiFiManager::loop() {
   yy_status_t yyStatus = getStatus();
 
   //Only when the status changes:
@@ -183,6 +186,10 @@ uint8_t YoYoWiFiManager::update() {
           blinkWiFiLED(3);
           Serial.printf("Connected to: %s\n", WiFi.SSID().c_str());
           Serial.println(WiFi.localIP());
+        }
+        if(onConnectedHandler) {
+          onConnectedHandler();
+          if(onConnectedHandlerOnce) onConnectedHandler = NULL;
         }
       break;
       //implicitly in YY_MODE_PEER_CLIENT
@@ -203,39 +210,7 @@ uint8_t YoYoWiFiManager::update() {
     printModeAndStatus();
   }
 
-  //Everytime for each status:
-  switch(currentStatus) {
-    //implicitly in YY_MODE_CLIENT
-    case YY_CONNECTED:
-      updateClientTimeOut();
-    break;
-    //implicitly in YY_MODE_PEER_CLIENT
-    case YY_CONNECTED_PEER_CLIENT:
-      updateClientTimeOut();
-    break;
-    //implicitly in YY_MODE_PEER_SERVER
-    case YY_CONNECTED_PEER_SERVER:
-      if(hasClients()) updateServerTimeOut();
-    break;
-    case YY_NO_SSID_AVAIL:
-      if(currentMode != YY_MODE_PEER_SERVER && clientHasTimedOut())
-        setMode(YY_MODE_PEER_SERVER);
-    break;
-    case YY_CONNECTION_LOST:
-      if(currentMode != YY_MODE_PEER_SERVER && clientHasTimedOut())
-        setMode(YY_MODE_PEER_SERVER);
-
-      if(currentMode != YY_MODE_CLIENT && serverHasTimedOut() && settings && settings -> hasNetworkCredentials())
-        setMode(YY_MODE_CLIENT);
-    break;
-    case YY_DISCONNECTED:
-      if(currentMode != YY_MODE_PEER_SERVER && clientHasTimedOut())
-        setMode(YY_MODE_PEER_SERVER);
-
-      if(currentMode != YY_MODE_CLIENT && serverHasTimedOut() && settings && settings -> hasNetworkCredentials())
-        setMode(YY_MODE_CLIENT);
-    break;
-  }
+  setMode(updateTimeOuts());
 
   //Everytime for each mode:
   switch(currentMode) {
@@ -279,8 +254,9 @@ bool YoYoWiFiManager::setMode(yy_mode_t mode) {
         break;
       case YY_MODE_CLIENT:
         updateClientTimeOut();
-        if(startWebServerOnceConnected) startWebServer();
-        else stopWebServer(); //make sure it's stopped
+        //TODO: causes crash (on at least) ESP8266
+        //if(startWebServerOnceConnected) startWebServer();
+        //else stopWebServer(); //make sure it's stopped
         break;
       case YY_MODE_PEER_CLIENT: 
         updateClientTimeOut();
@@ -361,6 +337,30 @@ bool YoYoWiFiManager::serverHasTimedOut() {
 
 void YoYoWiFiManager::updateServerTimeOut() {
   serverTimeOutAtMs = millis() + WIFISERVERTIMEOUT;
+}
+
+YoYoWiFiManager::yy_mode_t YoYoWiFiManager::updateTimeOuts() {
+  yy_mode_t mode = currentMode;
+
+  switch(currentStatus) {
+    case YY_CONNECTED:
+      updateClientTimeOut();
+    break;
+    case YY_CONNECTED_PEER_CLIENT:
+      updateClientTimeOut();
+    break;
+    case YY_CONNECTED_PEER_SERVER:
+      if(hasClients()) updateServerTimeOut();
+    break;
+    default:
+      if(currentMode != YY_MODE_PEER_SERVER && clientHasTimedOut())
+        mode = YY_MODE_PEER_SERVER;
+
+      if(currentMode != YY_MODE_CLIENT && serverHasTimedOut() && settings && settings -> hasNetworkCredentials())
+        mode = YY_MODE_CLIENT;
+  }
+
+  return(mode);
 }
 
 

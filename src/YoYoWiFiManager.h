@@ -88,6 +88,8 @@ class YoYoWiFiManager : public AsyncWebHandler {
     void updateServerTimeOut();
     bool serverHasTimedOut();
 
+    yy_mode_t updateTimeOuts();
+
     uint32_t lastScanNetworksAtMs = 0;
 
     YoYoWiFiManagerSettings *settings = NULL;
@@ -95,9 +97,13 @@ class YoYoWiFiManager : public AsyncWebHandler {
 
     bool SPIFFS_ENABLED = false;
 
-    typedef bool (*callbackPtr)(const String&, JsonVariant);
-    callbackPtr yoYoCommandGetHandler = NULL;
-    callbackPtr yoYoCommandPostHandler = NULL;
+    typedef void (*voidCallbackPtr)();
+    voidCallbackPtr onConnectedHandler = NULL;
+    bool onConnectedHandlerOnce = false;
+
+    typedef bool (*jsonCallbackPtr)(const String&, JsonVariant);
+    jsonCallbackPtr yoYoCommandGetHandler = NULL;
+    jsonCallbackPtr yoYoCommandPostHandler = NULL;
 
     void startWebServer();
     void stopWebServer();
@@ -134,16 +140,16 @@ class YoYoWiFiManager : public AsyncWebHandler {
   public:
     YoYoWiFiManager();
 
-    void init(YoYoWiFiManagerSettings *settings, callbackPtr getHandler = NULL, callbackPtr postHandler = NULL, bool startWebServerOnceConnected = false, int webServerPort = 80, uint8_t wifiLEDPin = 2);
+    void init(YoYoWiFiManagerSettings *settings, voidCallbackPtr onConnectedHandler = NULL, jsonCallbackPtr getHandler = NULL, jsonCallbackPtr postHandler = NULL, bool startWebServerOnceConnected = false, int webServerPort = 80, uint8_t wifiLEDPin = 2);
+    void setOnConnectedHandler(voidCallbackPtr onConnectedHandler, bool once = false);
     boolean begin(char const *apName, char const *apPassword = NULL, bool autoconnect = true);
     void connect();
 
-    void blinkWiFiLED(int count);
-
-    bool findNetwork(char const *ssid, char *matchingSSID, bool autocomplete = false, bool autocorrect = false, int autocorrectError = 0);
-
-    uint8_t update();
+    uint8_t loop();
     yy_status_t getStatus();
+
+    void blinkWiFiLED(int count);
+    bool findNetwork(char const *ssid, char *matchingSSID, bool autocomplete = false, bool autocorrect = false, int autocorrectError = 0);
 
     //AsyncWebHandler:
     bool canHandle(AsyncWebServerRequest *request);
