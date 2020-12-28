@@ -14,7 +14,7 @@ void setup() {
 }
 
 void loop() {
-  uint8_t currentStatus = wifiManager.update();
+  uint8_t currentStatus = wifiManager.loop();
 
   switch(currentStatus) {
     case YY_CONNECTED:

@@ -14,7 +14,7 @@ void setup() {
 }
 
 void loop() {
-  uint8_t wifiStatus = wifiManager.update();
+  uint8_t wifiStatus = wifiManager.loop();
 
   if(wifiStatus == YY_CONNECTED) {
     //YY_CONNECTED is equal to WL_CONNECTED
