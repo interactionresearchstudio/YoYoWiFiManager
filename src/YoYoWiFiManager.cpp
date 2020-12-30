@@ -3,7 +3,7 @@
 YoYoWiFiManager::YoYoWiFiManager() {
 }
 
-void YoYoWiFiManager::init(YoYoWiFiManagerSettings *settings, voidCallbackPtr onConnectedHandler, jsonCallbackPtr getHandler, jsonCallbackPtr postHandler, bool startWebServerOnceConnected, int webServerPort, uint8_t wifiLEDPin) {
+void YoYoWiFiManager::init(YoYoWiFiManagerSettingsInterface *settings, voidCallbackPtr onConnectedHandler, jsonCallbackPtr getHandler, jsonCallbackPtr postHandler, bool startWebServerOnceConnected, int webServerPort, uint8_t wifiLEDPin) {
   this -> settings = settings;
   this -> onConnectedHandler = onConnectedHandler;
   this -> yoYoCommandGetHandler = getHandler;
