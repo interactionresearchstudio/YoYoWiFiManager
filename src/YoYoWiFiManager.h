@@ -23,7 +23,7 @@
 #endif
 #include <ESPAsyncWebServer.h>
 
-#include "YoYoWiFiManager/YoYoSettingsInterface.h"
+#include "YoYoWiFiManager/YoYoNetworkSettingsInterface.h"
 #include "YoYoWiFiManager/Levenshtein.h"
 #include "YoYoWiFiManager/Espressif.h"
 #include "YoYoWiFiManager/index_html.h"
@@ -94,7 +94,7 @@ class YoYoWiFiManager : public AsyncWebHandler {
 
     uint32_t lastScanNetworksAtMs = 0;
 
-    YoYoSettingsInterface *settings = NULL;
+    YoYoNetworkSettingsInterface *settings = NULL;
     uint8_t wifiLEDPin;
 
     bool SPIFFS_ENABLED = false;
@@ -141,7 +141,7 @@ class YoYoWiFiManager : public AsyncWebHandler {
   public:
     YoYoWiFiManager();
 
-    void init(YoYoSettingsInterface *settings, voidCallbackPtr onConnectedHandler = NULL, jsonCallbackPtr getHandler = NULL, jsonCallbackPtr postHandler = NULL, bool startWebServerOnceConnected = false, int webServerPort = 80, uint8_t wifiLEDPin = 2);
+    void init(YoYoNetworkSettingsInterface *settings, voidCallbackPtr onConnectedHandler = NULL, jsonCallbackPtr getHandler = NULL, jsonCallbackPtr postHandler = NULL, bool startWebServerOnceConnected = false, int webServerPort = 80, uint8_t wifiLEDPin = 2);
     boolean begin(char const *apName, char const *apPassword = NULL, bool autoconnect = true);
     void end();
     void connect();

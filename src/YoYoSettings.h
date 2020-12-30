@@ -11,7 +11,7 @@
     #define YY_MAX_EEPROM_CAPACITY_BYTES  512
 #endif
 
-class YoYoSettings : public DynamicJsonDocument, public YoYoSettingsInterface {
+class YoYoSettings : public DynamicJsonDocument, public YoYoNetworkSettingsInterface {
     private:
         int eepromAddress = 0;
         int eepromCapacityBytes = 0;
