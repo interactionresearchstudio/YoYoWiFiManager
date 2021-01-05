@@ -114,6 +114,9 @@ class YoYoWiFiManager : public AsyncWebHandler {
 
     void startPeerNetworkAsAP();
 
+    String getCredentialsAsJsonString();
+    void getCredentialsAsJson(JsonDocument& jsonDoc);
+
     int scanNetworks();
     String getNetworksAsJsonString();
     void getNetworksAsJson(JsonDocument& jsonDoc);
@@ -167,15 +170,15 @@ class YoYoWiFiManager : public AsyncWebHandler {
     void getNetworks(AsyncWebServerRequest * request);
     void getClients(AsyncWebServerRequest * request);
     void getPeers(AsyncWebServerRequest * request);
+    void getCredentials(AsyncWebServerRequest *request);
+    
+    bool setCredentials(AsyncWebServerRequest *request, JsonVariant json);
+    bool setCredentials(JsonVariant json);
 
     bool hasPeers();
     int countPeers();
     bool hasClients();
     int countClients();
-
-    void getCredentials(AsyncWebServerRequest *request);
-    bool setCredentials(AsyncWebServerRequest *request, JsonVariant json);
-    bool setCredentials(JsonVariant json);
 
     bool isEspressif(char *macAddress);
   private:

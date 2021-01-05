@@ -584,12 +584,37 @@ void YoYoWiFiManager::makePOST(const char *server, const char *path, JsonVariant
 }
 
 void YoYoWiFiManager::getCredentials(AsyncWebServerRequest *request) {
-  //TODO: get all the credentials and turn them into json - but not passwords
   AsyncResponseStream *response = request->beginResponseStream("application/json");
-  response->print("{}");
-  //serializeJson(settings["credentials"], Serial);
 
+  response->print(getCredentialsAsJsonString());
   request->send(response);
+}
+
+String YoYoWiFiManager::getCredentialsAsJsonString() {
+  String jsonString;
+
+  StaticJsonDocument<1000> jsonDoc;
+  getCredentialsAsJson(jsonDoc);
+  serializeJson(jsonDoc[0], jsonString);
+
+  return (jsonString);
+}
+
+void YoYoWiFiManager::getCredentialsAsJson(JsonDocument& jsonDoc) {
+  JsonArray credentials = jsonDoc.createNestedArray();
+ 
+  if(settings) {
+    //Get all the credentials and turn them into json - but not passwords
+    char *ssid = new char[32];
+
+    int credentialsCount = settings -> getNumberOfNetworkCredentials();
+
+    for (int i = 0; i < credentialsCount; i++) {
+      settings -> getSSID(i, ssid);
+      credentials.add(ssid);
+    }
+    delete ssid;
+  }
 }
 
 bool YoYoWiFiManager::setCredentials(AsyncWebServerRequest *request, JsonVariant json) {
@@ -604,6 +629,8 @@ bool YoYoWiFiManager::setCredentials(JsonVariant json) {
 
   const char* ssid = json["ssid"];
   const char* password = json["password"];
+
+  Serial.printf("setCredentials %s  %s\n", ssid, password);
 
   if(ssid && password) {
     addNetwork(ssid, password, true);
