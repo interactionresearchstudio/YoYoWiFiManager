@@ -447,13 +447,18 @@ void YoYoWiFiManager::handleBody(AsyncWebServerRequest * request, uint8_t *data,
   }
   else if (request->method() == HTTP_POST) {
     if(request->url().startsWith("/yoyo")) {
-      String json = "";
-      for (int i = 0; i < len; i++)  json += char(data[i]);
+      char *json = new char[1024];
+      len = min(len, (unsigned int) 1024);
+      for (int i = 0; i < len; i++)  json[i] = char(data[i]);
+
+      Serial.printf("JSON > %s\n", json);
 
       StaticJsonDocument<1024> jsonDoc;
       if (!deserializeJson(jsonDoc, json)) {
         onYoYoCommandPOST(request, jsonDoc.as<JsonVariant>());
       }
+
+      delete json;
     }
     else {
       request->send(404);
