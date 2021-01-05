@@ -100,7 +100,7 @@ class YoYoWiFiManager : public AsyncWebHandler {
     bool SPIFFS_ENABLED = false;
 
     typedef void (*voidCallbackPtr)();
-    voidCallbackPtr onConnectedHandler = NULL;
+    voidCallbackPtr onYY_CONNECTEDhandler = NULL;
 
     typedef bool (*jsonCallbackPtr)(const String&, JsonVariant);
     jsonCallbackPtr yoYoCommandGetHandler = NULL;
@@ -141,7 +141,7 @@ class YoYoWiFiManager : public AsyncWebHandler {
   public:
     YoYoWiFiManager();
 
-    void init(YoYoNetworkSettingsInterface *settings, voidCallbackPtr onConnectedHandler = NULL, jsonCallbackPtr getHandler = NULL, jsonCallbackPtr postHandler = NULL, bool startWebServerOnceConnected = false, int webServerPort = 80, uint8_t wifiLEDPin = 2);
+    void init(YoYoNetworkSettingsInterface *settings, voidCallbackPtr onYY_CONNECTEDhandler = NULL, jsonCallbackPtr getHandler = NULL, jsonCallbackPtr postHandler = NULL, bool startWebServerOnceConnected = false, int webServerPort = 80, uint8_t wifiLEDPin = 2);
     boolean begin(char const *apName, char const *apPassword = NULL, bool autoconnect = true);
     void end();
     void connect();

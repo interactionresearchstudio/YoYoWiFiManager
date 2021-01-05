@@ -3,9 +3,9 @@
 YoYoWiFiManager::YoYoWiFiManager() {
 }
 
-void YoYoWiFiManager::init(YoYoNetworkSettingsInterface *settings, voidCallbackPtr onConnectedHandler, jsonCallbackPtr getHandler, jsonCallbackPtr postHandler, bool startWebServerOnceConnected, int webServerPort, uint8_t wifiLEDPin) {
+void YoYoWiFiManager::init(YoYoNetworkSettingsInterface *settings, voidCallbackPtr onYY_CONNECTEDhandler, jsonCallbackPtr getHandler, jsonCallbackPtr postHandler, bool startWebServerOnceConnected, int webServerPort, uint8_t wifiLEDPin) {
   this -> settings = settings;
-  this -> onConnectedHandler = onConnectedHandler;
+  this -> onYY_CONNECTEDhandler = onYY_CONNECTEDhandler;
   this -> yoYoCommandGetHandler = getHandler;
   this -> yoYoCommandPostHandler = postHandler;
 
@@ -191,8 +191,8 @@ uint8_t YoYoWiFiManager::loop() {
             Serial.printf("Connected to: %s\n", WiFi.SSID().c_str());
             Serial.println(WiFi.localIP());
           }
-          if(onConnectedHandler) {
-            onConnectedHandler();
+          if(onYY_CONNECTEDhandler) {
+            onYY_CONNECTEDhandler();
           }
         break;
         //implicitly in YY_MODE_PEER_CLIENT
@@ -494,6 +494,7 @@ String YoYoWiFiManager::getContentType(String filename) {
   else if (filename.endsWith(".gif")) return "image/gif";
   else if (filename.endsWith(".jpg")) return "image/jpeg";
   else if (filename.endsWith(".ico")) return "image/x-icon";
+  else if (filename.endsWith(".svg")) return "image/svg+xml";
   else if (filename.endsWith(".xml")) return "text/xml";
   else if (filename.endsWith(".pdf")) return "application/x-pdf";
   else if (filename.endsWith(".zip")) return "application/x-zip";
