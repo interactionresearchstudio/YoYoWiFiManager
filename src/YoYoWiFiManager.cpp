@@ -845,9 +845,7 @@ void YoYoWiFiManager::getNetworksAsJson(JsonDocument& jsonDoc) {
   JsonArray networks = jsonDoc.createNestedArray();
 
   int n = scanNetworks();
-  n = (n > MAX_NETWORKS_TO_SCAN) ? MAX_NETWORKS_TO_SCAN : n;
 
-  //Array is ordered by signal strength - strongest first
   for (int i = 0; i < n; ++i) {
     String networkSSID = WiFi.SSID(i);
     if (networkSSID.length() <= SSID_MAX_LENGTH) {
