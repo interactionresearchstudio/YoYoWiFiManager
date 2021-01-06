@@ -165,7 +165,7 @@ class YoYoWiFiManager : public AsyncWebHandler {
 
     void onYoYoCommandGET(AsyncWebServerRequest *request);
     void onYoYoCommandPOST(AsyncWebServerRequest *request, JsonVariant json);
-    void broadcastToPeersPOST(AsyncWebServerRequest *request, JsonVariant json);
+    void broadcastToPeersPOST(String path, JsonVariant json);
 
     void getNetworks(AsyncWebServerRequest * request);
     void getClients(AsyncWebServerRequest * request);

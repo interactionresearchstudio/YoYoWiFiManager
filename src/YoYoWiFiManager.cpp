@@ -542,7 +542,7 @@ void YoYoWiFiManager::onYoYoCommandGET(AsyncWebServerRequest *request) {
 void YoYoWiFiManager::onYoYoCommandPOST(AsyncWebServerRequest *request, JsonVariant json) {
   if (request->url().equals("/yoyo/credentials")) {
     if(setCredentials(request, json)) {
-      broadcastToPeersPOST(request, json);
+      broadcastToPeersPOST(request->url(), json);
       delay(random(MAX_SYNC_DELAY));  //stop peers that are restarting together becoming synchronised
       connect();
     }
@@ -557,14 +557,14 @@ void YoYoWiFiManager::onYoYoCommandPOST(AsyncWebServerRequest *request, JsonVari
   }
 }
 
-void YoYoWiFiManager::broadcastToPeersPOST(AsyncWebServerRequest *request, JsonVariant json) {
+void YoYoWiFiManager::broadcastToPeersPOST(String path, JsonVariant json) {
   if(currentMode == YY_MODE_PEER_SERVER) {
     int peerCount = countPeers();
 
     char *ipAddress = new char[17];
     for (int i = 0; i < peerCount; i++) {
       getPeerN(i, ipAddress, NULL);
-      makePOST(ipAddress, request->url().c_str(), json);
+      makePOST(ipAddress, path.c_str(), json);
     }
     delete ipAddress;
   }
