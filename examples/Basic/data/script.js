@@ -1,3 +1,5 @@
+var maxWifiNetworks = 5;
+
 function init() {
     $('#config').hide();
     $('#nextstep').hide();
@@ -20,7 +22,9 @@ function configure(json) {
 
     console.log(json);
 
-    populateNetworksList("");
+    populateNetworksList();
+    //setInterval(populatePeersList, 3000);
+    populatePeersList();
 }
 
 function onKeyPressed(event) {
@@ -33,23 +37,56 @@ function populateNetworksList(selectedNetwork) {
     let networks = $('#networks-list-select');
 
     $.getJSON('/yoyo/networks', function (json) {
-        networks.empty();
-        $.each(json, function (key, entry) {
-            let network = $('<option></option>');
+        if(json.length > 0) {
+            networks.empty();
+            //Order the networks by signal strength and limit to top n
+            json = json.sort((a, b) => parseInt(b.RSSI) - parseInt(a.RSSI));
+            var ssidList = json.slice(0, maxWifiNetworks).map(i => {
+                return i.SSID;
+            });
 
-            network.attr('value', entry.SSID).text(entry.SSID);
-            if(entry.SSID == selectedNetwork) network.attr('selected', true);
+            //The selected network will always remain:
+            if(selectedNetwork && !ssidList.includes(selectedNetwork)) ssidList.push(selectedNetwork); 
 
-            networks.append(network);
-        });
+            $.each(ssidList, function (key, entry) {
+                let network = $('<option></option>');
 
-        if($('#networks-list-select option').length > 0) {
+                network.attr('value', entry).text(entry);
+                if(entry == selectedNetwork) network.attr('selected', true);
+
+                networks.append(network);
+            });
+
             $('#networks-list-select').attr('disabled', false);
             $('#password').attr('disabled', false);
         }
-        else {
+        
+        if($('#networks-list-select option').length == 0) {
             networks.append('<option>No Networks Found</option>');
-            setTimeout(populateNetworksList, 10000);
+        }
+
+        setTimeout(function() {
+            populateNetworksList($('#networks-list-select').children("option:selected").val());
+        }, 10000);
+    });
+}
+
+function populatePeersList() {
+    let peers = $('#peers-list');
+
+    $.getJSON('/yoyo/peers', function (json) {
+        if(json.length > 0) {
+            console.log(json);
+            /*
+            $.each(ssidList, function (key, entry) {
+                let network = $('<option></option>');
+    
+                network.attr('value', entry).text(entry);
+                if(entry == selectedNetwork) network.attr('selected', true);
+    
+                networks.append(network);
+            });
+            */
         }
     });
 }
