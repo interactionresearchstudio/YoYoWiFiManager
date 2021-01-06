@@ -1,5 +1,5 @@
 # The Yo-Yo Network Manager Library
-The Yo-Yo Network Manager Library is an [Arduino](http://www.arduino.cc/download) Library that manages WiFi connectivity for the [ESP8266](https://en.wikipedia.org/wiki/ESP8266) and [ESP32](https://en.wikipedia.org/wiki/ESP32). It hosts rich web experiences using HTML and JavaScript that can integrate with external circuitry - perhaps a weather station. It also offers a simple means to configure WiFi credentials for devices via a web captive portal. Where there are multiple devices to configure at once, it automatically forms a peer-to-peer network and supports broadcast operations.
+The Yo-Yo Network Manager Library is an [Arduino](http://www.arduino.cc/download) Library that manages WiFi connectivity for the [ESP8266](https://en.wikipedia.org/wiki/ESP8266) and [ESP32](https://en.wikipedia.org/wiki/ESP32). It hosts rich web experiences using HTML and JavaScript that can integrate with external circuitry. It also offers a simple means to configure WiFi credentials for devices via a web captive portal. Where there are multiple devices to configure at once, it automatically forms a peer-to-peer network and supports broadcast operations.
 
 ## Installation
 
