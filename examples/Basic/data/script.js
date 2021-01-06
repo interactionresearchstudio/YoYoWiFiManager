@@ -1,4 +1,4 @@
-var maxWifiNetworks = 5;
+const maxWifiNetworks = 5;
 
 function init() {
     $('#config').hide();
@@ -12,7 +12,6 @@ function init() {
     $('#password').attr('disabled', true);
 
     $.getJSON('/yoyo/credentials', function (json) {
-        $('#config').show();
         configure(json);
     });
 }
@@ -23,8 +22,6 @@ function configure(json) {
     console.log(json);
 
     populateNetworksList();
-    //setInterval(populatePeersList, 3000);
-    populatePeersList();
 }
 
 function onKeyPressed(event) {
@@ -71,22 +68,18 @@ function populateNetworksList(selectedNetwork) {
     });
 }
 
-function populatePeersList() {
-    let peers = $('#peers-list');
-
+function getPeers() {
     $.getJSON('/yoyo/peers', function (json) {
         if(json.length > 0) {
             console.log(json);
-            /*
-            $.each(ssidList, function (key, entry) {
-                let network = $('<option></option>');
-    
-                network.attr('value', entry).text(entry);
-                if(entry == selectedNetwork) network.attr('selected', true);
-    
-                networks.append(network);
-            });
-            */
+        }
+    });
+}
+
+function getClients() {
+    $.getJSON('/yoyo/clients', function (json) {
+        if(json.length > 0) {
+            console.log(json);
         }
     });
 }
