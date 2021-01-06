@@ -64,11 +64,17 @@ bool onYoYoCommandPOST(const String &url, JsonVariant json) {
   serializeJson(json, Serial);
 
   if(url.equals("/yoyo/settings")) {
+    //TODO: merge settings doc with values from the payload
+    //(*settings)["name"] = "value";
+    
     //an alternative to using the built-in /yoyo/credentials...
     success = wifiManager.setCredentials(json);
-    if(success) wifiManager.connect();
-
-    //TODO: set any other values from the payload
+    if(success) {
+      wifiManager.broadcastToPeersPOST(url, json);
+      wifiManager.connect();
+    }
+    
+    (*settings).save();
   }
 
   return(success);
