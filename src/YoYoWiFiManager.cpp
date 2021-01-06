@@ -480,10 +480,13 @@ void YoYoWiFiManager::sendFile(AsyncWebServerRequest * request, String path) {
   }
 }
 
+void YoYoWiFiManager::setRootIndexFile(String rootIndexFile) {
+  this -> rootIndexFile = rootIndexFile;
+}
+
 void YoYoWiFiManager::sendIndexFile(AsyncWebServerRequest * request) {
-  String path = "/index.html";
-  if (SPIFFS_ENABLED && SPIFFS.exists(path)) {
-    sendFile(request, path);
+  if (SPIFFS_ENABLED && SPIFFS.exists(rootIndexFile)) {
+    sendFile(request, rootIndexFile);
   }
   else {
     request->send(200, "text/html", DEFAULT_INDEX_HTML);

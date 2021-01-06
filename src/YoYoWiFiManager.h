@@ -105,6 +105,8 @@ class YoYoWiFiManager : public AsyncWebHandler {
     jsonCallbackPtr yoYoCommandGetHandler = NULL;
     jsonCallbackPtr yoYoCommandPostHandler = NULL;
 
+    String rootIndexFile = "/index.html";
+
     void startWebServer();
     void stopWebServer();
 
@@ -184,6 +186,8 @@ class YoYoWiFiManager : public AsyncWebHandler {
   private:
     bool mac_addr_to_c_str(uint8_t *mac, char *str);
     int getOUI(char *mac);
+
+    void setRootIndexFile(String rootIndexFile);
 };
 
 #endif
