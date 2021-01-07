@@ -10,7 +10,7 @@ void setup() {
   settings = new YoYoSettings(512); //Settings must be created here in Setup() as contains call to EEPROM.begin() which will otherwise fail
   wifiManager.init(settings, onceConnected, onYoYoCommandGET, onYoYoCommandPOST, true);
 
-  wifiManager.begin("YoYoMachines", "blinkblink");
+  wifiManager.begin("YoYoMachines", "blinkblink", true);
 }
 
 void onceConnected() {
