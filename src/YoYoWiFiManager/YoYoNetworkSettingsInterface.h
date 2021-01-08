@@ -1,7 +1,7 @@
-#ifndef YoYoWiFiManagerSettings_h
-#define YoYoWiFiManagerSettings_h
+#ifndef YoYoNetworkSettingsInterface_h
+#define YoYoNetworkSettingsInterface_h
 
-class YoYoWiFiManagerSettings {
+class YoYoNetworkSettingsInterface {
   public:
     virtual int getNumberOfNetworkCredentials() = 0;
     virtual void addNetwork(const char *ssid, const char *password, bool autosave = true) = 0;

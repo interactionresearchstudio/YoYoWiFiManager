@@ -1,5 +1,5 @@
-#ifndef Settings_h
-#define Settings_h
+#ifndef YoYoSettings_h
+#define YoYoSettings_h
 
 #include <ArduinoJson.h>
 #include <EEPROM.h>
@@ -11,7 +11,7 @@
     #define YY_MAX_EEPROM_CAPACITY_BYTES  512
 #endif
 
-class Settings : public DynamicJsonDocument, public YoYoWiFiManagerSettings {
+class YoYoSettings : public DynamicJsonDocument, public YoYoNetworkSettingsInterface {
     private:
         int eepromAddress = 0;
         int eepromCapacityBytes = 0;
@@ -26,7 +26,7 @@ class Settings : public DynamicJsonDocument, public YoYoWiFiManagerSettings {
         }
 
     public:
-        Settings(int capacityBytes, int address = 0) : DynamicJsonDocument(capacityBytes) {
+        YoYoSettings(int capacityBytes, int address = 0) : DynamicJsonDocument(capacityBytes) {
             Serial.println("Settings");
             init(capacityBytes, address);
         }
