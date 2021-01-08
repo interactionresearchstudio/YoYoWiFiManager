@@ -128,16 +128,20 @@ class YoYoWiFiManager : public AsyncWebHandler {
 
     String getPeersAsJsonString();
     void getPeersAsJson(JsonDocument& jsonDoc);
+    void createNestedPeer(JsonArray& peers, IPAddress *ip, uint8_t *macAddress, bool localhost = false, bool gateway = false);
 
     int updateClientList();
-    bool getPeerN(int n, char *ipAddress, char *macAddress);
+    bool getPeerN(int n, IPAddress *ipAddress, uint8_t *macAddress);
 
     #if defined(ESP32)
       wifi_sta_list_t wifi_sta_list;
     #endif
     tcpip_adapter_sta_list_t adapter_sta_list;
 
-    void makePOST(const char *server, const char *path, JsonVariant json);
+    int POST(const char *server, const char *path, JsonVariant json);
+    int POST(const char *server, const char *path, const char *payload);
+    int GET(const char *server, const char *path, JsonVariant json);
+    int GET(const char *server, const char *path, const char *payload);
 
     bool setMode(yy_mode_t mode);
 
@@ -182,12 +186,14 @@ class YoYoWiFiManager : public AsyncWebHandler {
     bool hasClients();
     int countClients();
 
-    bool isEspressif(char *macAddress);
+    bool isEspressif(uint8_t *macAddress);
+    void setRootIndexFile(String rootIndexFile);
+
   private:
     bool mac_addr_to_c_str(uint8_t *mac, char *str);
     int getOUI(char *mac);
-
-    void setRootIndexFile(String rootIndexFile);
+    int getOUI(uint8_t *mac);
+    int getOUI(uint8_t a, uint8_t b, uint8_t c, uint8_t d = 0, uint8_t e = 0, uint8_t f = 0);
 };
 
 #endif

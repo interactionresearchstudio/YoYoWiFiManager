@@ -564,31 +564,77 @@ void YoYoWiFiManager::broadcastToPeersPOST(String path, JsonVariant json) {
   if(currentMode == YY_MODE_PEER_SERVER) {
     int peerCount = countPeers();
 
-    char *ipAddress = new char[17];
+    IPAddress *ipAddress = new IPAddress();
     for (int i = 0; i < peerCount; i++) {
       getPeerN(i, ipAddress, NULL);
-      makePOST(ipAddress, path.c_str(), json);
+      POST(ipAddress -> toString().c_str(), path.c_str(), json);
     }
     delete ipAddress;
   }
 }
 
-void YoYoWiFiManager::makePOST(const char *server, const char *path, JsonVariant json) {
+int YoYoWiFiManager::POST(const char *server, const char *path, JsonVariant json) {
+  int httpResponseCode = -1;
+
   String jsonAsString;
   serializeJson(json, jsonAsString);
+  httpResponseCode = POST(server, path, jsonAsString.c_str());
+
+  return(httpResponseCode);
+}
+
+int YoYoWiFiManager::POST(const char *server, const char *path, const char *payload) {
+  int httpResponseCode = -1;
 
   String urlAsString = "http://" + String(server) + String(path);
-  Serial.printf("%s > %s\n", urlAsString.c_str(), jsonAsString.c_str());
+  Serial.printf("POST %s > %s\n", urlAsString.c_str(), payload);
 
   HTTPClient http;
 
   http.begin(urlAsString);
-  http.POST(jsonAsString);
+  httpResponseCode = http.POST(payload);
 
   // Read response
   Serial.print(http.getString());
 
   http.end();
+
+  return(httpResponseCode);
+}
+
+int YoYoWiFiManager::GET(const char *server, const char *path, JsonVariant json) {
+  int httpResponseCode = -1;
+
+  /*
+  char *payload = new char[16];
+  httpResponseCode = GET(server, path, payload);
+  //set json
+  delete payload;
+  */
+
+  return(httpResponseCode);
+}
+
+int YoYoWiFiManager::GET(const char *server, const char *path, const char *payload) {
+  int httpResponseCode = -1;
+
+  /*
+  String urlAsString = "http://" + String(server) + String(path);
+  Serial.printf("GET %s\n", urlAsString.c_str());
+
+  HTTPClient http;
+
+  http.begin(urlAsString);
+  httpResponseCode = http.GET();
+  
+  if (httpResponseCode > 0) {
+    //String payload = http.getString();
+    //Serial.println(payload);
+  }
+  http.end();
+  */
+
+  return(httpResponseCode);
 }
 
 void YoYoWiFiManager::getCredentials(AsyncWebServerRequest *request) {
@@ -609,6 +655,7 @@ String YoYoWiFiManager::getCredentialsAsJsonString() {
 }
 
 void YoYoWiFiManager::getCredentialsAsJson(JsonDocument& jsonDoc) {
+  //TODO: should in same structure - just missing the password field or replacing with *s
   JsonArray credentials = jsonDoc.createNestedArray();
  
   if(settings) {
@@ -667,30 +714,51 @@ String YoYoWiFiManager::getPeersAsJsonString() {
 
 void YoYoWiFiManager::getPeersAsJson(JsonDocument& jsonDoc) {
   JsonArray peers = jsonDoc.createNestedArray();
- 
-  char *ipAddress = new char[17];
-  char *macAddress = new char[18];
+
+  IPAddress *ipAddress = new IPAddress();
+  uint8_t *macAddress = new uint8_t[6];
+
+  IPAddress *localIPAddress = new IPAddress(WiFi.softAPIP());
 
   if(currentMode == YY_MODE_PEER_SERVER) {
-    int peerCount = countPeers();
+    createNestedPeer(peers, localIPAddress, WiFi.softAPmacAddress(macAddress), true, true);
 
+    int peerCount = countPeers();
     for (int i = 0; i < peerCount; i++) {
       getPeerN(i, ipAddress, macAddress);
-
-      JsonObject peer  = peers.createNestedObject();
-      peer["IP"] = ipAddress;
-      peer["MAC"] = macAddress;   
+      createNestedPeer(peers, ipAddress, macAddress);
     }
   }
   else if(currentMode == YY_MODE_PEER_CLIENT) {
-    //TODO - request from server or just the server or empty?
+    //TODO - request from the server
+    //char *payload = NULL;
+    //GET(WiFi.gatewayIP().toString().c_str(), "/yoyo/peers", payload);
+    createNestedPeer(peers, localIPAddress, WiFi.softAPmacAddress(macAddress), true);
   }
   else if(currentMode == YY_MODE_CLIENT) {
-    //TODO - empty?
+    //The only peer we know about is the local one:
+    createNestedPeer(peers, localIPAddress, WiFi.softAPmacAddress(macAddress), true);
   }
+
+  delete localIPAddress;
 
   delete ipAddress;
   delete macAddress;
+}
+
+void YoYoWiFiManager::createNestedPeer(JsonArray& peers, IPAddress *ip, uint8_t *macAddress, bool localhost, bool gateway) {
+    JsonObject peer = peers.createNestedObject();
+    if(ip && macAddress) {
+      peer["IP"] = ip -> toString();
+
+      char *macAddressAsCStr = new char[18];
+      mac_addr_to_c_str(macAddress, macAddressAsCStr);
+      peer["MAC"] = macAddressAsCStr;
+      delete macAddressAsCStr;
+
+      if(localhost) peer["LOCALHOST"] = true;
+      if(gateway)   peer["GATEWAY"] = true;
+    }
 }
 
 void YoYoWiFiManager::getClients(AsyncWebServerRequest * request) {
@@ -796,14 +864,11 @@ int YoYoWiFiManager::countPeers() {
       break;
     case YY_MODE_PEER_SERVER:
       tcpip_adapter_sta_info_t station;
-      char *thisMacAddress = new char[18];
       int clientCount = countClients();
       for(int n = 0; n < clientCount; ++n) {
         station = adapter_sta_list.sta[n];
-        mac_addr_to_c_str(station.mac, thisMacAddress);
-        if(isEspressif(thisMacAddress)) count++;
+        if(isEspressif(station.mac)) count++;
       }
-      delete thisMacAddress;
       break;
   }
 
@@ -824,7 +889,7 @@ int YoYoWiFiManager::countClients() {
   return(count);
 }
 
-bool YoYoWiFiManager::getPeerN(int n, char *ipAddress, char *macAddress) {
+bool YoYoWiFiManager::getPeerN(int n, IPAddress *ipAddress, uint8_t *macAddress) {
   bool success = false;
 
   switch(currentMode) {
@@ -837,22 +902,19 @@ bool YoYoWiFiManager::getPeerN(int n, char *ipAddress, char *macAddress) {
       break;
     case YY_MODE_PEER_SERVER:
         tcpip_adapter_sta_info_t station;
-        char *thisMacAddress = new char[18];
         int clientCount = countClients();
         int peerCount = 0;
         for(int i = 0; i < clientCount && !success; ++i) {
           station = adapter_sta_list.sta[i];
-          mac_addr_to_c_str(station.mac, thisMacAddress);
-          if(isEspressif(thisMacAddress)) {
+          if(isEspressif(station.mac)) {
             success = (peerCount == n);
             if(success) {
-              if(ipAddress != NULL)   strcpy(ipAddress, ip4addr_ntoa(&(station.ip)));
-              if(macAddress != NULL)  mac_addr_to_c_str(station.mac, macAddress);
+              if(ipAddress != NULL)   (*ipAddress) = (station.ip).addr;
+              if(macAddress != NULL)  memcpy(macAddress, station.mac, sizeof(station.mac[0])*6);
             }
             peerCount++;
           }
         }
-        delete thisMacAddress;
       break;
   }
 
@@ -915,10 +977,10 @@ int YoYoWiFiManager::scanNetworks() {
   return(count);
 }
 
-bool YoYoWiFiManager::isEspressif(char *macAddress) {
+bool YoYoWiFiManager::isEspressif(uint8_t *macAddress) {
   bool result = false;
 
-  int oui = getOUI(macAddress);
+  int oui = getOUI(macAddress[0], macAddress[1], macAddress[2]);
   int count = sizeof(ESPRESSIF_OUI) > 0 ? sizeof(ESPRESSIF_OUI)/sizeof(ESPRESSIF_OUI[0]) : 0;
 
   for(int n=0; n < count && !result; ++n) {
@@ -944,8 +1006,20 @@ int YoYoWiFiManager::getOUI(char *mac) {
     int a, b, c, d, e, f;
     sscanf(mac, "%x:%x:%x:%x:%x:%x", &a, &b, &c, &d, &e, &f);
     
-    oui = (a << 16) & 0xff0000 | (b << 8) & 0x00ff00 | c & 0x0000ff;
+    oui = getOUI(a, b, c);
   }
+
+  return(oui);
+}
+
+int YoYoWiFiManager::getOUI(uint8_t *mac) {
+  int oui = getOUI(mac[0], mac[1], mac[2]);
+
+  return(oui);
+}
+
+int YoYoWiFiManager::getOUI(uint8_t a, uint8_t b, uint8_t c, uint8_t d, uint8_t e, uint8_t f) {
+  int oui = (a << 16) & 0xff0000 | (b << 8) & 0x00ff00 | c & 0x0000ff;
 
   return(oui);
 }
