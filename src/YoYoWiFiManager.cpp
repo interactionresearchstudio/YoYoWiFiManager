@@ -447,6 +447,7 @@ void YoYoWiFiManager::handleBody(AsyncWebServerRequest * request, uint8_t *data,
   }
   else if (request->method() == HTTP_POST) {
     if(request->url().startsWith("/yoyo")) {
+      //TODO: this limit seems artificial
       char *json = new char[1024];
       len = min(len, (unsigned int) 1024);
       for (int i = 0; i < len; i++)  json[i] = char(data[i]);
@@ -576,9 +577,10 @@ void YoYoWiFiManager::broadcastToPeersPOST(String path, JsonVariant json) {
 int YoYoWiFiManager::POST(const char *server, const char *path, JsonVariant json) {
   int httpResponseCode = -1;
 
-  String jsonAsString;
-  serializeJson(json, jsonAsString);
-  httpResponseCode = POST(server, path, jsonAsString.c_str());
+  String jsonAsString(json.memoryUsage());
+  if(serializeJson(json, jsonAsString) > 0) {
+    httpResponseCode = POST(server, path, jsonAsString.c_str());
+  }
 
   return(httpResponseCode);
 }
@@ -602,23 +604,30 @@ int YoYoWiFiManager::POST(const char *server, const char *path, const char *payl
   return(httpResponseCode);
 }
 
-int YoYoWiFiManager::GET(const char *server, const char *path, JsonVariant json) {
+int YoYoWiFiManager::GET(const char *server, const char *path, JsonDocument &json) {
   int httpResponseCode = -1;
 
-  /*
-  char *payload = new char[16];
-  httpResponseCode = GET(server, path, payload);
-  //set json
-  delete payload;
-  */
+  String urlAsString = "http://" + String(server) + String(path);
+  Serial.printf("GET %s\n", urlAsString.c_str());
+
+  HTTPClient http;
+  http.begin(urlAsString);
+
+  httpResponseCode = http.GET();
+  if (httpResponseCode > 0) {
+    if(deserializeJson(json, http.getStream()) != DeserializationError::Ok) {
+      httpResponseCode = -1;
+    }
+  }
+
+  http.end();
 
   return(httpResponseCode);
 }
 
-int YoYoWiFiManager::GET(const char *server, const char *path, const char *payload) {
+int YoYoWiFiManager::GET(const char *server, const char *path, char *payload) {
   int httpResponseCode = -1;
 
-  /*
   String urlAsString = "http://" + String(server) + String(path);
   Serial.printf("GET %s\n", urlAsString.c_str());
 
@@ -628,11 +637,9 @@ int YoYoWiFiManager::GET(const char *server, const char *path, const char *paylo
   httpResponseCode = http.GET();
   
   if (httpResponseCode > 0) {
-    //String payload = http.getString();
-    //Serial.println(payload);
+    strcpy(payload, http.getString().c_str());
   }
   http.end();
-  */
 
   return(httpResponseCode);
 }
@@ -707,38 +714,35 @@ String YoYoWiFiManager::getPeersAsJsonString() {
 
   StaticJsonDocument<1000> jsonDoc;
   getPeersAsJson(jsonDoc);
-  serializeJson(jsonDoc[0], jsonString);
+  serializeJson(jsonDoc, jsonString);
 
   return (jsonString);
 }
 
 void YoYoWiFiManager::getPeersAsJson(JsonDocument& jsonDoc) {
-  JsonArray peers = jsonDoc.createNestedArray();
-
   IPAddress *ipAddress = new IPAddress();
   uint8_t *macAddress = new uint8_t[6];
 
   IPAddress *localIPAddress = new IPAddress(WiFi.softAPIP());
 
   if(currentMode == YY_MODE_PEER_SERVER) {
-    createNestedPeer(peers, localIPAddress, WiFi.softAPmacAddress(macAddress), true, true);
+    createNestedPeer(jsonDoc, localIPAddress, WiFi.softAPmacAddress(macAddress), true, true);
 
     int peerCount = countPeers();
     for (int i = 0; i < peerCount; i++) {
       getPeerN(i, ipAddress, macAddress);
-      createNestedPeer(peers, ipAddress, macAddress);
+      createNestedPeer(jsonDoc, ipAddress, macAddress);
     }
   }
   else if(currentMode == YY_MODE_PEER_CLIENT) {
-    //TODO - request from the server
-    //char *payload = NULL;
-    //GET(WiFi.gatewayIP().toString().c_str(), "/yoyo/peers", payload);
-    createNestedPeer(peers, localIPAddress, WiFi.softAPmacAddress(macAddress), true);
+    GET(WiFi.gatewayIP().toString().c_str(), "/yoyo/peers", jsonDoc);
+    //TODO fix LOCALHOST flag in jsonDoc
   }
   else if(currentMode == YY_MODE_CLIENT) {
     //The only peer we know about is the local one:
-    createNestedPeer(peers, localIPAddress, WiFi.softAPmacAddress(macAddress), true);
+    createNestedPeer(jsonDoc, localIPAddress, WiFi.softAPmacAddress(macAddress), true);
   }
+  serializeJson(jsonDoc, Serial);
 
   delete localIPAddress;
 
@@ -746,8 +750,8 @@ void YoYoWiFiManager::getPeersAsJson(JsonDocument& jsonDoc) {
   delete macAddress;
 }
 
-void YoYoWiFiManager::createNestedPeer(JsonArray& peers, IPAddress *ip, uint8_t *macAddress, bool localhost, bool gateway) {
-    JsonObject peer = peers.createNestedObject();
+void YoYoWiFiManager::createNestedPeer(JsonDocument& jsonDoc, IPAddress *ip, uint8_t *macAddress, bool localhost, bool gateway) {
+    JsonObject peer = jsonDoc.createNestedObject();
     if(ip && macAddress) {
       peer["IP"] = ip -> toString();
 
