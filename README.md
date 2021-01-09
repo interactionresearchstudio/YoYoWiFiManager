@@ -14,9 +14,13 @@ The Yo-Yo Network Manager requires that either the Arduino core for the ESP8266 
 
 ## Endpoints
 The following endpoints are built-in:
+
 /yoyo/credentials GET + POST
+
 /yoyo/networks GET
+
 /yoyo/clients GET
+
 /yoyo/peers GET
 
 ## Limitations
