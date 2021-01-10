@@ -714,7 +714,11 @@ String YoYoWiFiManager::getPeersAsJsonString() {
 
   StaticJsonDocument<1000> jsonDoc;
   getPeersAsJson(jsonDoc);
-  serializeJson(jsonDoc, jsonString);
+  
+  if(!jsonDoc.isNull()) {
+    serializeJson(jsonDoc, jsonString);
+  }
+  else jsonString = "[]";
 
   return (jsonString);
 }
@@ -723,9 +727,10 @@ void YoYoWiFiManager::getPeersAsJson(JsonDocument& jsonDoc) {
   IPAddress *ipAddress = new IPAddress();
   uint8_t *macAddress = new uint8_t[6];
 
-  IPAddress *localIPAddress = new IPAddress(WiFi.localIP());
-
+  IPAddress *localIPAddress = NULL;
+  
   if(currentMode == YY_MODE_PEER_SERVER) {
+    localIPAddress = new IPAddress(WiFi.softAPIP());
     createNestedPeer(jsonDoc, localIPAddress, WiFi.softAPmacAddress(macAddress), true, true);
 
     int peerCount = countPeers();
@@ -735,6 +740,7 @@ void YoYoWiFiManager::getPeersAsJson(JsonDocument& jsonDoc) {
     }
   }
   else if(currentMode == YY_MODE_PEER_CLIENT) {
+    localIPAddress = new IPAddress(WiFi.localIP());
     GET(WiFi.gatewayIP().toString().c_str(), "/yoyo/peers", jsonDoc);
     
     //Correct the LOCALHOST attribution
@@ -750,11 +756,11 @@ void YoYoWiFiManager::getPeersAsJson(JsonDocument& jsonDoc) {
   }
   else if(currentMode == YY_MODE_CLIENT) {
     //The only peer we know about is the local one:
+    localIPAddress = new IPAddress(WiFi.localIP());
     createNestedPeer(jsonDoc, localIPAddress, WiFi.softAPmacAddress(macAddress), true);
   }
-  serializeJson(jsonDoc, Serial);
 
-  delete localIPAddress;
+  if(localIPAddress) delete localIPAddress;
 
   delete ipAddress;
   delete macAddress;
