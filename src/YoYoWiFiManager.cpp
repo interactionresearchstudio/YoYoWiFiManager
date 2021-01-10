@@ -58,9 +58,6 @@ void YoYoWiFiManager::startPeerNetworkAsAP() {
   Serial.print("Wifi name:");
   Serial.println(peerNetworkSSID);
 
-  WiFi.mode(WIFI_AP);
-  delay(2000);
-
   WiFi.persistent(false);
   WiFi.softAPConfig(apIP, apIP, IPAddress(255, 255, 255, 0));
   WiFi.softAP(peerNetworkSSID, peerNetworkPassword);
@@ -258,16 +255,20 @@ bool YoYoWiFiManager::setMode(yy_mode_t mode) {
         break;
       case YY_MODE_CLIENT:
         updateClientTimeOut();
+        WiFi.mode(WIFI_STA);
         //TODO: causes crash (on at least) ESP8266
         //if(startWebServerOnceConnected) startWebServer();
         //else stopWebServer(); //make sure it's stopped
         break;
       case YY_MODE_PEER_CLIENT: 
         updateClientTimeOut();
+        WiFi.mode(WIFI_STA);
         startWebServer();
         break;
       case YY_MODE_PEER_SERVER:
         updateServerTimeOut();
+        WiFi.mode(WIFI_AP);
+        delay(2000);
         startPeerNetworkAsAP();
         startWebServer();
         break;
@@ -619,7 +620,6 @@ int YoYoWiFiManager::GET(const char *server, const char *path, JsonDocument &jso
       httpResponseCode = -1;
     }
   }
-
   http.end();
 
   return(httpResponseCode);
