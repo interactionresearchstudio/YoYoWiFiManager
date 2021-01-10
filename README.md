@@ -12,6 +12,17 @@ The Yo-Yo Network Manager requires that either the Arduino core for the ESP8266 
 * ESP8266 - https://github.com/esp8266/Arduino#installing-with-boards-manager
 * ESP32 - https://github.com/espressif/arduino-esp32/blob/master/docs/arduino-ide/boards_manager.md
 
+## Endpoints
+The following endpoints are built-in:
+
+/yoyo/credentials GET + POST
+
+/yoyo/networks GET
+
+/yoyo/clients GET
+
+/yoyo/peers GET
+
 ## Limitations
 The Yo-Yo Network Manager works with 2.4GHz WiFi networks, but not 5GHz networks - neither ESP8266 or ESP32 support this technology.
 

@@ -128,8 +128,7 @@ class YoYoWiFiManager : public AsyncWebHandler {
 
     String getPeersAsJsonString();
     void getPeersAsJson(JsonDocument& jsonDoc);
-    void createNestedPeer(JsonArray& peers, IPAddress *ip, uint8_t *macAddress, bool localhost = false, bool gateway = false);
-
+    void createNestedPeer(JsonDocument& jsonDoc, IPAddress *ip, uint8_t *macAddress, bool localhost = false, bool gateway = false);
     int updateClientList();
     bool getPeerN(int n, IPAddress *ipAddress, uint8_t *macAddress);
 
@@ -140,8 +139,8 @@ class YoYoWiFiManager : public AsyncWebHandler {
 
     int POST(const char *server, const char *path, JsonVariant json);
     int POST(const char *server, const char *path, const char *payload);
-    int GET(const char *server, const char *path, JsonVariant json);
-    int GET(const char *server, const char *path, const char *payload);
+    int GET(const char *server, const char *path, JsonDocument &json);
+    int GET(const char *server, const char *path, char *payload);
 
     bool setMode(yy_mode_t mode);
 
