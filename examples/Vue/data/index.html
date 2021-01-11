@@ -1,0 +1,27 @@
+<!-- Adapted from: https://raw.githubusercontent.com/radial-color-picker/vue-color-picker/master/examples/simple/index.html -->
+
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>YoYoWiFiManager - Vue Color Picker Example</title>
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <link rel="stylesheet" href="vue-color-picker.min.css">
+    <link href="style.css" rel="stylesheet" type="text/css">
+
+    <script src="vue.min.js"></script>
+    <script src="vue-color-picker.umd.min.js"></script>
+    <script src="axios.min.js"></script>
+</head>
+<body>
+    <div id="app">
+        <color-picker v-bind="color" @input="onInput" @change="onChange" @select="onSelect"></color-picker>
+        <h1>{{ msg }}</h1>
+        <pre>{{ color }}</pre>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
