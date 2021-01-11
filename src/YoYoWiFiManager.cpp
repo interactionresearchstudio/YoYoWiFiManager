@@ -450,10 +450,10 @@ void YoYoWiFiManager::handleBody(AsyncWebServerRequest * request, uint8_t *data,
     if(request->url().startsWith("/yoyo")) {
       //TODO: this limit seems artificial
       char *json = new char[1024];
-      len = min(len, (unsigned int) 1024);
-      for (int i = 0; i < len; i++)  json[i] = char(data[i]);
-
-      Serial.printf("JSON > %s\n", json);
+      len = min(len, (unsigned int) 1024-1);
+      int i = 0;
+      for (; i < len; i++)  json[i] = char(data[i]);
+      json[i+1] = '\0';
 
       StaticJsonDocument<1024> jsonDoc;
       if (!deserializeJson(jsonDoc, json)) {
