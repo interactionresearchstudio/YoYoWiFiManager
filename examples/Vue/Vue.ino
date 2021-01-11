@@ -29,7 +29,12 @@ bool onYoYoCommandPOST(const String &url, JsonVariant json) {
     serializeJson(json, Serial);
     Serial.println();
 
-    Serial.printf("hue %f\tsaturation %f\tluminosity %f\talpha %f\n",json["hue"].as<float>(), json["saturation"].as<float>(), json["luminosity"].as<float>(), json["alpha"].as<float>());
+    int red = json["red"].as<int>();
+    int green = json["green"].as<int>();
+    int blue = json["blue"].as<int>();
+
+    Serial.printf("R:%i\tG:%i\tB:%i\n", red, green, blue);
+
     success = true;
   }
 
