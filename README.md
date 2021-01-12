@@ -1,5 +1,5 @@
 # The Yo-Yo WiFi Manager Library
-The Yo-Yo WiFi Manager Library is an [Arduino](http://www.arduino.cc/download) Library that manages WiFi connectivity for the [ESP8266](https://en.wikipedia.org/wiki/ESP8266) and [ESP32](https://en.wikipedia.org/wiki/ESP32). It hosts rich web experiences using HTML and JavaScript that can integrate with external circuitry. It also offers a simple means to configure WiFi credentials for devices via a web captive portal. Where there are multiple devices to configure at once, it automatically forms a peer-to-peer network and supports broadcast operations.
+The Yo-Yo WiFi Manager Library is an [Arduino](http://www.arduino.cc/download) Library that hosts rich web experiences using HTML and JavaScript on the [ESP8266](https://en.wikipedia.org/wiki/ESP8266) and [ESP32](https://en.wikipedia.org/wiki/ESP32) that simply integrate with external circuitry. Operating as a [captive portal](https://en.wikipedia.org/wiki/Captive_portal) hosted webpages can standalone without the dependency of the Internet. Alternatively this can be used like the excellent [WiFiManager](https://github.com/tzapu/WiFiManager) library to manage WiFi connectivity for IoT devices. In addition, with the Yo-Yo WiFi Manager Library peer-to-peer networks of devices can be simply configured and operate in concert through one webpage.
 
 ## Installation
 
@@ -11,6 +11,10 @@ The Yo-Yo WiFi Manager requires that either the Arduino core for the ESP8266 or 
 
 * ESP8266 - https://github.com/esp8266/Arduino#installing-with-boards-manager
 * ESP32 - https://github.com/espressif/arduino-esp32/blob/master/docs/arduino-ide/boards_manager.md
+
+### Sketch Data Folder Uploader Tool
+* ESP8266 - https://randomnerdtutorials.com/install-esp8266-filesystem-uploader-arduino-ide/
+* ESP32 - https://randomnerdtutorials.com/install-esp32-filesystem-uploader-arduino-ide/
 
 ## Endpoints
 The following endpoints are built-in:
