@@ -44,6 +44,8 @@ bool onYoYoCommandPOST(const String &url, JsonVariant json) {
     Serial.printf("R:%i\tG:%i\tB:%i\n", red, green, blue);
     setLEDColourRGB(red, green, blue);
 
+    wifiManager.broadcastToPeersPOST(url, json);
+
     success = true;
   }
 
@@ -51,7 +53,13 @@ bool onYoYoCommandPOST(const String &url, JsonVariant json) {
 }
 
 void setLEDColourRGB(int r, int g, int b) {
-  analogWrite(LED_RED_PIN, r);
-  analogWrite(LED_GREEN_PIN, g);
-  analogWrite(LED_BLUE_PIN, b);
+  #if defined(ESP8266)
+    analogWrite(LED_RED_PIN, r);
+    analogWrite(LED_GREEN_PIN, g);
+    analogWrite(LED_BLUE_PIN, b);
+
+  #elif defined(ESP32)
+    //analogWrite is not defined for ESP32
+
+  #endif
 }

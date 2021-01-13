@@ -562,23 +562,31 @@ void YoYoWiFiManager::onYoYoCommandPOST(AsyncWebServerRequest *request, JsonVari
   }
 }
 
-void YoYoWiFiManager::broadcastToPeersPOST(String path, JsonVariant json) {
+bool YoYoWiFiManager::broadcastToPeersPOST(String path, JsonVariant json) {
+  bool result = false;
+
   if(currentMode == YY_MODE_PEER_SERVER) {
     int peerCount = countPeers();
 
-    IPAddress *ipAddress = new IPAddress();
-    for (int i = 0; i < peerCount; i++) {
-      getPeerN(i, ipAddress, NULL);
-      POST(ipAddress -> toString().c_str(), path.c_str(), json);
+    if(peerCount > 0) {
+      result = true;
+      IPAddress *ipAddress = new IPAddress();
+      for (int i = 0; i < peerCount; i++) {
+        getPeerN(i, ipAddress, NULL);
+        POST(ipAddress -> toString().c_str(), path.c_str(), json);
+      }
+      delete ipAddress;
     }
-    delete ipAddress;
   }
+
+  return(result);
 }
 
 int YoYoWiFiManager::POST(const char *server, const char *path, JsonVariant json) {
   int httpResponseCode = -1;
 
-  String jsonAsString(json.memoryUsage());
+  String jsonAsString;
+  jsonAsString.reserve(json.memoryUsage());
   if(serializeJson(json, jsonAsString) > 0) {
     httpResponseCode = POST(server, path, jsonAsString.c_str());
   }
