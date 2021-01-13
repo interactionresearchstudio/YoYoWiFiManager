@@ -585,7 +585,8 @@ bool YoYoWiFiManager::broadcastToPeersPOST(String path, JsonVariant json) {
 int YoYoWiFiManager::POST(const char *server, const char *path, JsonVariant json) {
   int httpResponseCode = -1;
 
-  String jsonAsString(json.memoryUsage());
+  String jsonAsString;
+  jsonAsString.reserve(json.memoryUsage());
   if(serializeJson(json, jsonAsString) > 0) {
     httpResponseCode = POST(server, path, jsonAsString.c_str());
   }
