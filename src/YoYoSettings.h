@@ -37,20 +37,41 @@ class YoYoSettings : public DynamicJsonDocument, public YoYoNetworkSettingsInter
             return(result);
         }
 
-        void addNetwork(const char *ssid, const char *password, bool autosave = true) {
+        bool addNetwork(const char *ssid, const char *password, bool autosave = true) {
+            bool success = false;
+            
             Serial.printf("Settings::addNetwork %s  %s\n", ssid, password);
 
-            StaticJsonDocument<128> json;
-            json["ssid"] = ssid;
-            json["password"] = password;
+            int index = getNetwork(ssid);
+            if(index >= 0) {
+                //Rewrite the password of an exisiting network:
+                (*this)["credentials"][index]["password"] = password;
+            }
+            else {
+                //Add a new network:
+                StaticJsonDocument<128> json;
+                json["ssid"] = ssid;
+                json["password"] = password;
 
-            Serial.print("Adding... ");
-            serializeJson(json, Serial);
-            Serial.print("\n");
-
-            (*this)["credentials"].add(json);
+                (*this)["credentials"].add(json);
+            }
 
             if(autosave) save();
+
+            return(success);
+        }
+
+        int getNetwork(const char *ssid) {
+            int index = -1;
+
+            for(int n = 0; n < (*this)["credentials"].size(); ++n) {
+                if((*this)["credentials"][n]["ssid"] == ssid) {
+                    index = n;
+                    break;
+                }
+            }
+
+            return(index);
         }
 
         void getSSID(int n, char *ssid) {

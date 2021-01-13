@@ -15,6 +15,8 @@ void YoYoWiFiManager::init(YoYoNetworkSettingsInterface *settings, voidCallbackP
   this -> wifiLEDPin = wifiLEDPin;
   pinMode(wifiLEDPin, OUTPUT);
 
+  WiFi.persistent(false); //YoYoWiFiManager manages the persistents of networks itself
+
   #if defined(ESP32)
     memset(&wifi_sta_list, 0, sizeof(wifi_sta_list));
   #endif
@@ -53,19 +55,22 @@ void YoYoWiFiManager::connect() {
   setMode(YY_MODE_CLIENT);
 }
 
-// Creates Access Point for other device to connect to
 void YoYoWiFiManager::startPeerNetworkAsAP() {
   Serial.print("Wifi name:");
   Serial.println(peerNetworkSSID);
 
-  WiFi.persistent(false);
   WiFi.softAPConfig(apIP, apIP, IPAddress(255, 255, 255, 0));
   WiFi.softAP(peerNetworkSSID, peerNetworkPassword);
   IPAddress myIP = WiFi.softAPIP();
   Serial.println(myIP);
 
-  //Start captive portal
+  //Resolve all hostnames to this IP address:
   dnsServer.start(DNS_PORT, "*", apIP);
+}
+
+void YoYoWiFiManager::stopPeerNetworkAsAP() {
+  WiFi.softAPdisconnect(true);
+  dnsServer.stop();
 }
 
 void YoYoWiFiManager::startWebServer() {
@@ -245,8 +250,7 @@ bool YoYoWiFiManager::setMode(yy_mode_t mode) {
       case YY_MODE_PEER_CLIENT: 
         break;
       case YY_MODE_PEER_SERVER:
-        WiFi.softAPdisconnect(true);
-        dnsServer.stop();
+        stopPeerNetworkAsAP();
         break;
     }
 
@@ -267,7 +271,7 @@ bool YoYoWiFiManager::setMode(yy_mode_t mode) {
         break;
       case YY_MODE_PEER_SERVER:
         updateServerTimeOut();
-        WiFi.mode(WIFI_AP);
+        WiFi.mode(WIFI_AP_STA);
         delay(2000);
         startPeerNetworkAsAP();
         startWebServer();
@@ -547,6 +551,7 @@ void YoYoWiFiManager::onYoYoCommandGET(AsyncWebServerRequest *request) {
 void YoYoWiFiManager::onYoYoCommandPOST(AsyncWebServerRequest *request, JsonVariant json) {
   if (request->url().equals("/yoyo/credentials")) {
     if(setCredentials(request, json)) {
+
       broadcastToPeersPOST(request->url(), json);
       delay(random(MAX_SYNC_DELAY));  //stop peers that are restarting together becoming synchronised
       connect();
@@ -664,14 +669,13 @@ String YoYoWiFiManager::getCredentialsAsJsonString() {
 
   StaticJsonDocument<1000> jsonDoc;
   getCredentialsAsJson(jsonDoc);
-  serializeJson(jsonDoc[0], jsonString);
+  serializeJson(jsonDoc, jsonString); //TODO: test length
 
   return (jsonString);
 }
 
 void YoYoWiFiManager::getCredentialsAsJson(JsonDocument& jsonDoc) {
   //TODO: should in same structure - just missing the password field or replacing with *s
-  JsonArray credentials = jsonDoc.createNestedArray();
  
   if(settings) {
     //Get all the credentials and turn them into json - but not passwords
@@ -681,7 +685,7 @@ void YoYoWiFiManager::getCredentialsAsJson(JsonDocument& jsonDoc) {
 
     for (int i = 0; i < credentialsCount; i++) {
       settings -> getSSID(i, ssid);
-      credentials.add(ssid);
+      jsonDoc.add(ssid);
     }
     delete ssid;
   }

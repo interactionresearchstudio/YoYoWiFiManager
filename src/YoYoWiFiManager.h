@@ -115,6 +115,7 @@ class YoYoWiFiManager : public AsyncWebHandler {
     bool addNetwork(char const *ssid, char const *password, bool autosave = true);
 
     void startPeerNetworkAsAP();
+    void stopPeerNetworkAsAP();
 
     String getCredentialsAsJsonString();
     void getCredentialsAsJson(JsonDocument& jsonDoc);
