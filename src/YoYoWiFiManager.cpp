@@ -192,6 +192,8 @@ uint8_t YoYoWiFiManager::loop() {
             blinkWiFiLED(3);
             Serial.printf("Connected to: %s\n", WiFi.SSID().c_str());
             Serial.println(WiFi.localIP());
+
+            if(settings) settings -> setLastNetwork(WiFi.SSID().c_str());
           }
           if(onYY_CONNECTEDhandler) {
             onYY_CONNECTEDhandler();
@@ -667,9 +669,13 @@ void YoYoWiFiManager::getCredentials(AsyncWebServerRequest *request) {
 String YoYoWiFiManager::getCredentialsAsJsonString() {
   String jsonString;
 
-  StaticJsonDocument<1000> jsonDoc;
+  StaticJsonDocument<1024> jsonDoc;
   getCredentialsAsJson(jsonDoc);
-  serializeJson(jsonDoc, jsonString); //TODO: test length
+
+  if(!jsonDoc.isNull()) {
+    serializeJson(jsonDoc, jsonString); //TODO: test length
+  }
+  else jsonString = "[]";
 
   return (jsonString);
 }
@@ -680,14 +686,23 @@ void YoYoWiFiManager::getCredentialsAsJson(JsonDocument& jsonDoc) {
   if(settings) {
     //Get all the credentials and turn them into json - but not passwords
     char *ssid = new char[32];
+    char *password = new char[64];
 
     int credentialsCount = settings -> getNumberOfNetworkCredentials();
+    int lastNetwork = settings -> getLastNetwork();
 
-    for (int i = 0; i < credentialsCount; i++) {
-      settings -> getSSID(i, ssid);
-      jsonDoc.add(ssid);
+    for (int n = 0; n < credentialsCount; n++) {
+      settings -> getSSID(n, ssid);
+      settings -> getPassword(n, password);
+
+      StaticJsonDocument<128> json;
+      json["ssid"] = ssid;
+      json["password"] = password;
+      if(n == lastNetwork) json["lastnetwork"] = true;
+
+      jsonDoc.add(json);
     }
-    delete ssid;
+    delete ssid, password;
   }
 }
 
@@ -700,6 +715,8 @@ bool YoYoWiFiManager::setCredentials(AsyncWebServerRequest *request, JsonVariant
 
 bool YoYoWiFiManager::setCredentials(JsonVariant json) {
   bool success = false;
+
+  serializeJson(json, Serial);
 
   const char* ssid = json["ssid"];
   const char* password = json["password"];

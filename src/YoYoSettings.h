@@ -44,7 +44,7 @@ class YoYoSettings : public DynamicJsonDocument, public YoYoNetworkSettingsInter
 
             int index = getNetwork(ssid);
             if(index >= 0) {
-                //Rewrite the password of an exisiting network:
+                //Rewrite the password of an existing network:
                 (*this)["credentials"][index]["password"] = password;
             }
             else {
@@ -80,6 +80,39 @@ class YoYoSettings : public DynamicJsonDocument, public YoYoNetworkSettingsInter
 
         void getPassword(int n, char *password) {
             strcpy(password, (*this)["credentials"][n]["password"]);
+        }
+
+        void setLastNetwork(const char *ssid, bool autosave) {
+            int index = getNetwork(ssid);
+
+            if(index >= 0) {
+                for(int n = 0; n < (*this)["credentials"].size(); ++n) {
+                    JsonVariant network = (*this)["credentials"][n];
+
+                    if(n == index) {
+                        network["lastnetwork"] = true;
+                    }
+                    else {
+                        if(network["lastnetwork"]) {
+                            network.remove("lastnetwork");
+                        }
+                    }
+                }
+                if(autosave) save();
+            }
+        }
+
+        int getLastNetwork() {
+            int index = -1;
+
+            for(int n = 0; n < (*this)["credentials"].size(); ++n) {
+                if((*this)["credentials"][n]["lastnetwork"]) {
+                    index = n;
+                    break;
+                }
+            }
+
+            return(index);
         }
 
         bool save() {
