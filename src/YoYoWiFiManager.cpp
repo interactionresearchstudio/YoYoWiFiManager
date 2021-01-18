@@ -540,7 +540,7 @@ void YoYoWiFiManager::sendFile(AsyncWebServerRequest * request, String path) {
   Serial.println("handleFileRead: " + path);
 
   if (SPIFFS_ENABLED && SPIFFS.exists(path)) {
-    request->send(SPIFFS, path, getContentType(path));
+    request->send(SPIFFS, path, getMimeType(path));
   }
   else {
     request->send(404);
@@ -560,7 +560,7 @@ void YoYoWiFiManager::sendIndexFile(AsyncWebServerRequest * request) {
   }
 }
 
-String YoYoWiFiManager::getContentType(String filename) {
+String YoYoWiFiManager::getMimeType(String filename) {
   if (filename.endsWith(".htm")) return "text/html";
   else if (filename.endsWith(".html")) return "text/html";
   else if (filename.endsWith(".css")) return "text/css";
@@ -691,72 +691,82 @@ bool YoYoWiFiManager::broadcastToPeersPOST(String path, JsonVariant json) {
   return(result);
 }
 
-int YoYoWiFiManager::POST(const char *server, const char *path, JsonVariant json) {
+int YoYoWiFiManager::POST(const char *server, const char *path, JsonVariant payload, char *response) {
   int httpResponseCode = -1;
 
   String jsonAsString;
-  jsonAsString.reserve(json.memoryUsage());
-  if(serializeJson(json, jsonAsString) > 0) {
-    httpResponseCode = POST(server, path, jsonAsString.c_str());
+  jsonAsString.reserve(payload.memoryUsage());
+  if(serializeJson(payload, jsonAsString) > 0) {
+    httpResponseCode = POST(server, path, jsonAsString.c_str(), response);
+    if(response) {
+      //TODO: parse json
+    }
   }
 
   return(httpResponseCode);
 }
 
-int YoYoWiFiManager::POST(const char *server, const char *path, const char *payload) {
+int YoYoWiFiManager::POST(const char *server, const char *path, const char *payload, char *response) {
   int httpResponseCode = -1;
 
   String urlAsString = "http://" + String(server) + String(path);
   Serial.printf("POST %s > %s\n", urlAsString.c_str(), payload);
 
   HTTPClient http;
+  WiFiClient client;
+  http.begin(client, urlAsString);
 
-  http.begin(urlAsString);
   httpResponseCode = http.POST(payload);
-  delay(500);
 
-  // Read response
-  Serial.print(http.getString());
+  if(response && httpResponseCode > 0) {
+    //#TODO: test length?
+    strcpy(response, http.getString().c_str());
+  }
 
+  client.stop();
   http.end();
 
   return(httpResponseCode);
 }
 
-int YoYoWiFiManager::GET(const char *server, const char *path, JsonDocument &json) {
+int YoYoWiFiManager::GET(const char *server, const char *path, JsonDocument &response) {
   int httpResponseCode = -1;
 
   String urlAsString = "http://" + String(server) + String(path);
   Serial.printf("GET %s\n", urlAsString.c_str());
 
   HTTPClient http;
-  http.begin(urlAsString);
+  WiFiClient client;
+  http.begin(client, urlAsString);
 
   httpResponseCode = http.GET();
   if (httpResponseCode > 0) {
-    if(deserializeJson(json, http.getStream()) != DeserializationError::Ok) {
+    if(deserializeJson(response, http.getStream()) != DeserializationError::Ok) {
       httpResponseCode = -1;
     }
   }
+  client.stop();
   http.end();
 
   return(httpResponseCode);
 }
 
-int YoYoWiFiManager::GET(const char *server, const char *path, char *payload) {
+int YoYoWiFiManager::GET(const char *server, const char *path, char *response) {
   int httpResponseCode = -1;
 
   String urlAsString = "http://" + String(server) + String(path);
   Serial.printf("GET %s\n", urlAsString.c_str());
 
   HTTPClient http;
+  WiFiClient client;
+  http.begin(client, urlAsString);
 
-  http.begin(urlAsString);
   httpResponseCode = http.GET();
-  
   if (httpResponseCode > 0) {
-    strcpy(payload, http.getString().c_str());
+    //#TODO: test length?
+    strcpy(response, http.getString().c_str());
   }
+  client.stop();
   http.end();
 
   return(httpResponseCode);
@@ -811,8 +821,15 @@ void YoYoWiFiManager::getCredentialsAsJson(JsonDocument& jsonDoc) {
 }
 
 bool YoYoWiFiManager::setCredentials(AsyncWebServerRequest *request, JsonVariant json) {
+  serializeJson(json, Serial);
+
   bool success = setCredentials(json);
-  request->send(success ? 200 : 400);
+  if(success) {
+    request->send(200, "application/javascript", getCredentialsAsJsonString());
+  }
+  else {
+    request->send(400);
+  }
 
   return(success);
 }
