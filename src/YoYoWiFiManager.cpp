@@ -272,7 +272,8 @@ bool YoYoWiFiManager::setMode(yy_mode_t mode) {
         break;
       case YY_MODE_CLIENT:
         break;
-      case YY_MODE_PEER_CLIENT: 
+      case YY_MODE_PEER_CLIENT:
+        if(!peerNetworkSet()) return(false);
         break;
       case YY_MODE_PEER_SERVER:
         if(!peerNetworkSet()) return(false);
@@ -758,12 +759,13 @@ void YoYoWiFiManager::getCredentialsAsJson(JsonDocument& jsonDoc) {
       settings -> getSSID(n, ssid);
       settings -> getPassword(n, password);
 
-      StaticJsonDocument<128> json;
-      json["ssid"] = ssid;
-      json["password"] = password;
-      if(n == lastNetwork) json["lastnetwork"] = true;
+      //star out password - while maintaining length
+      for(int i=0; i < strlen(password); ++i) password[i] = '*';
 
-      jsonDoc.add(json);
+      JsonObject network  = jsonDoc.createNestedObject();
+      network["ssid"] = ssid;
+      network["password"] = password;
+      if(n == lastNetwork) network["lastnetwork"] = true;
     }
     delete ssid, password;
   }
@@ -779,16 +781,20 @@ bool YoYoWiFiManager::setCredentials(AsyncWebServerRequest *request, JsonVariant
 bool YoYoWiFiManager::setCredentials(JsonVariant json) {
   bool success = false;
 
-  serializeJson(json, Serial);
+  if(settings) {
+    serializeJson(json, Serial);
 
-  const char* ssid = json["ssid"];
-  const char* password = json["password"];
+    char *ssid = new char[32];
+    char *password = new char[64];
 
-  Serial.printf("setCredentials %s  %s\n", ssid, password);
+    strcpy(ssid, json["ssid"]);
+    strcpy(password, json["password"]);
 
-  if(ssid && password) {
-    addNetwork(ssid, password, true);
-    success = true;
+    Serial.printf("setCredentials %s  %s\n", ssid, password);
+    success = addNetwork(ssid, password, true);
+
+    delete password;
+    delete ssid;
   }
 
   return(success);
@@ -953,11 +959,10 @@ String YoYoWiFiManager::getClientsAsJsonString() {
 
 void YoYoWiFiManager::getClientsAsJson(JsonDocument& jsonDoc) {
   JsonArray clients = jsonDoc.createNestedArray();
- 
-  char *ipAddress = new char[17];
-  char *macAddress = new char[18];
 
   if(currentMode == YY_MODE_PEER_SERVER) {
+    char *ipAddress = new char[17];
+    char *macAddress = new char[18];
     tcpip_adapter_sta_info_t station;
 
     int clientCount = updateClientList();
@@ -969,16 +974,16 @@ void YoYoWiFiManager::getClientsAsJson(JsonDocument& jsonDoc) {
       client["IP"] = ipAddress;
       client["MAC"] = macAddress; 
     }
+
+    delete ipAddress;
+    delete macAddress;
   }
   else if(currentMode == YY_MODE_PEER_CLIENT) {
-    //TODO - reques from server?
+    //Empty
   }
   else if(currentMode == YY_MODE_CLIENT) {
-    //TODO - empty?
+    //Empty
   }
-
-  delete ipAddress;
-  delete macAddress;
 }
 
 int YoYoWiFiManager::updateClientList() {
@@ -1011,10 +1016,10 @@ int YoYoWiFiManager::updateClientList() {
     #endif
   }
   else if(currentMode == YY_MODE_PEER_CLIENT) {
-    //TODO
+    //NOTHING TO DO
   }
   else if(currentMode == YY_MODE_CLIENT) {
-    //TODO
+    //NOTHING TO DO
   }
 
   return(count);
