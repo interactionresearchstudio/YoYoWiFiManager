@@ -172,7 +172,11 @@ class YoYoWiFiManager : public AsyncWebHandler {
     String getContentType(String filename);
 
     void onYoYoCommandGET(AsyncWebServerRequest *request);
+    void onYoYoCommandPOST(AsyncWebServerRequest *request, uint8_t *data, size_t len);
     void onYoYoCommandPOST(AsyncWebServerRequest *request, JsonVariant json);
+    void onYoYoCommandDELETE(AsyncWebServerRequest *request, uint8_t *data, size_t len);
+    void onYoYoCommandDELETE(AsyncWebServerRequest *request, JsonVariant json);
+
     bool broadcastToPeersPOST(String path, JsonVariant json);
 
     void getNetworks(AsyncWebServerRequest * request);

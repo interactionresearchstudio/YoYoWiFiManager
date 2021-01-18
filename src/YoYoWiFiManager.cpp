@@ -98,7 +98,7 @@ void YoYoWiFiManager::stopWebServer() {
 }
 
 void YoYoWiFiManager::addPeerNetwork(char *ssid, char *password) {
-  if(ssid != NULL) {
+  if(ssid) {
     strcpy(peerNetworkSSID, ssid);
     if(password != NULL) strcpy(peerNetworkPassword, password);
 
@@ -125,18 +125,22 @@ bool YoYoWiFiManager::addNetwork(char const *ssid, char const *password, bool sa
 
   bool success = false;
 
-  if(strlen(ssid) > 0 && strlen(ssid) <= SSID_MAX_LENGTH) {
-    char *matchingSSID = new char[SSID_MAX_LENGTH];
+  if(ssid && password) {
+    if(strlen(ssid) > 0 && strlen(ssid) <= SSID_MAX_LENGTH) {
+      char *matchingSSID = new char[SSID_MAX_LENGTH];
 
-    if(findNetwork(ssid, matchingSSID, false, true, 2)) {
-      ssid = matchingSSID;
-    }
+      if(findNetwork(ssid, matchingSSID, false, true, 2)) {
+        ssid = matchingSSID;
+      }
 
-    if(wifiMulti.addAP(ssid, password)) {
-      if(save && settings) settings -> addNetwork(ssid, password);
-      success = true;
+      if(wifiMulti.addAP(ssid, password)) {
+        if(save && settings) {
+          success = settings -> addNetwork(ssid, password);
+        }
+        else success = true;
+      }
+      delete matchingSSID;
     }
-    delete matchingSSID;
   }
 
   return(success);
@@ -517,23 +521,15 @@ void YoYoWiFiManager::handleBody(AsyncWebServerRequest * request, uint8_t *data,
   }
   else if (request->method() == HTTP_POST) {
     if(request->url().startsWith("/yoyo")) {
-      //TODO: this limit seems artificial
-      char *json = new char[1024];
-      len = min(len, (unsigned int) 1024-1);
-      int i = 0;
-      for (; i < len; i++)  json[i] = char(data[i]);
-      json[i+1] = '\0';
-
-      StaticJsonDocument<1024> jsonDoc;
-      if (!deserializeJson(jsonDoc, json)) {
-        onYoYoCommandPOST(request, jsonDoc.as<JsonVariant>());
-      }
-
-      delete json;
+      onYoYoCommandPOST(request, data, len);
     }
-    else {
-      request->send(404);
+    else request->send(404);
+  }
+  else if (request->method() == HTTP_DELETE) {
+    if(request->url().startsWith("/yoyo")) {
+      onYoYoCommandDELETE(request, data, len);
     }
+    else request->send(404);
   }
   else {
     request->send(400);
@@ -613,13 +609,29 @@ void YoYoWiFiManager::onYoYoCommandGET(AsyncWebServerRequest *request) {
   }
 }
 
+void YoYoWiFiManager::onYoYoCommandPOST(AsyncWebServerRequest *request, uint8_t *data, size_t len) {
+  //TODO: this limit seems artificial
+  char *json = new char[1024];
+  len = min(len, (unsigned int) 1024-1);
+  int i = 0;
+  for (; i < len; i++)  json[i] = char(data[i]);
+  json[i+1] = '\0';
+
+  StaticJsonDocument<1024> jsonDoc;
+  if (!deserializeJson(jsonDoc, json)) {
+    onYoYoCommandPOST(request, jsonDoc.as<JsonVariant>());
+  }
+
+  delete json;
+}
+
 void YoYoWiFiManager::onYoYoCommandPOST(AsyncWebServerRequest *request, JsonVariant json) {
   if (request->url().equals("/yoyo/credentials")) {
     if(setCredentials(request, json)) {
 
-      broadcastToPeersPOST(request->url(), json);
-      delay(random(MAX_SYNC_DELAY));  //stop peers that are restarting together becoming synchronised
-      connect();
+      //broadcastToPeersPOST(request->url(), json);
+      //delay(random(MAX_SYNC_DELAY));  //stop peers that are restarting together becoming synchronised
+      //connect();
     }
   }
   else {
@@ -630,6 +642,33 @@ void YoYoWiFiManager::onYoYoCommandPOST(AsyncWebServerRequest *request, JsonVari
     }
     request->send(success ? 200 : 404);
   }
+}
+
+void YoYoWiFiManager::onYoYoCommandDELETE(AsyncWebServerRequest *request, uint8_t *data, size_t len) {
+  //TODO: this limit seems artificial
+  char *json = new char[1024];
+  len = min(len, (unsigned int) 1024-1);
+  int i = 0;
+  for (; i < len; i++)  json[i] = char(data[i]);
+  json[i+1] = '\0';
+
+  StaticJsonDocument<1024> jsonDoc;
+  if (!deserializeJson(jsonDoc, json)) {
+    onYoYoCommandDELETE(request, jsonDoc.as<JsonVariant>());
+  }
+
+  delete json;
+}
+
+void YoYoWiFiManager::onYoYoCommandDELETE(AsyncWebServerRequest *request, JsonVariant json) {
+  bool success = false;
+
+  if (request->url().equals("/yoyo/credentials")) {
+    //TODO: implement delete using YoYoSettings::removeNetwork()
+    success = true;
+  }
+
+  request->send(success ? 200 : 404);
 }
 
 bool YoYoWiFiManager::broadcastToPeersPOST(String path, JsonVariant json) {
