@@ -790,8 +790,10 @@ bool YoYoWiFiManager::setCredentials(JsonVariant json) {
     strcpy(ssid, json["ssid"]);
     strcpy(password, json["password"]);
 
-    Serial.printf("setCredentials %s  %s\n", ssid, password);
-    success = addNetwork(ssid, password, true);
+    if(ssid && password) {
+      Serial.printf("setCredentials %s  %s\n", ssid, password);
+      success = addNetwork(ssid, password, true);
+    }
 
     delete password;
     delete ssid;
