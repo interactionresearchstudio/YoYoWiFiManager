@@ -759,6 +759,9 @@ void YoYoWiFiManager::getCredentialsAsJson(JsonDocument& jsonDoc) {
       settings -> getSSID(n, ssid);
       settings -> getPassword(n, password);
 
+      //star out password - while maintaining length
+      for(int i=0; i < strlen(password); ++i) password[i] = '*';
+
       StaticJsonDocument<128> json;
       json["ssid"] = ssid;
       json["password"] = password;
@@ -780,16 +783,18 @@ bool YoYoWiFiManager::setCredentials(AsyncWebServerRequest *request, JsonVariant
 bool YoYoWiFiManager::setCredentials(JsonVariant json) {
   bool success = false;
 
-  serializeJson(json, Serial);
+  if(settings) {
+    serializeJson(json, Serial);
 
-  const char* ssid = json["ssid"];
-  const char* password = json["password"];
+    const char* ssid = json["ssid"];
+    const char* password = json["password"];
 
-  Serial.printf("setCredentials %s  %s\n", ssid, password);
+    Serial.printf("setCredentials %s  %s\n", ssid, password);
 
-  if(ssid && password) {
-    addNetwork(ssid, password, true);
-    success = true;
+    if(ssid && password) {
+      addNetwork(ssid, password, true);
+      success = true;
+    }
   }
 
   return(success);
@@ -1011,10 +1016,10 @@ int YoYoWiFiManager::updateClientList() {
     #endif
   }
   else if(currentMode == YY_MODE_PEER_CLIENT) {
-    //TODO
+    //NOTHING TO DO
   }
   else if(currentMode == YY_MODE_CLIENT) {
-    //TODO
+    //NOTHING TO DO
   }
 
   return(count);
