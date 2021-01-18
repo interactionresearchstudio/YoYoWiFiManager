@@ -272,7 +272,8 @@ bool YoYoWiFiManager::setMode(yy_mode_t mode) {
         break;
       case YY_MODE_CLIENT:
         break;
-      case YY_MODE_PEER_CLIENT: 
+      case YY_MODE_PEER_CLIENT:
+        if(!peerNetworkSet()) return(false);
         break;
       case YY_MODE_PEER_SERVER:
         if(!peerNetworkSet()) return(false);
