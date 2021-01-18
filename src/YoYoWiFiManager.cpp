@@ -762,12 +762,10 @@ void YoYoWiFiManager::getCredentialsAsJson(JsonDocument& jsonDoc) {
       //star out password - while maintaining length
       for(int i=0; i < strlen(password); ++i) password[i] = '*';
 
-      StaticJsonDocument<128> json;
-      json["ssid"] = ssid;
-      json["password"] = password;
-      if(n == lastNetwork) json["lastnetwork"] = true;
-
-      jsonDoc.add(json);
+      JsonObject network  = jsonDoc.createNestedObject();
+      network["ssid"] = ssid;
+      network["password"] = password;
+      if(n == lastNetwork) network["lastnetwork"] = true;
     }
     delete ssid, password;
   }
@@ -786,15 +784,17 @@ bool YoYoWiFiManager::setCredentials(JsonVariant json) {
   if(settings) {
     serializeJson(json, Serial);
 
-    const char* ssid = json["ssid"];
-    const char* password = json["password"];
+    char *ssid = new char[32];
+    char *password = new char[64];
+
+    strcpy(ssid, json["ssid"]);
+    strcpy(password, json["password"]);
 
     Serial.printf("setCredentials %s  %s\n", ssid, password);
+    success = addNetwork(ssid, password, true);
 
-    if(ssid && password) {
-      addNetwork(ssid, password, true);
-      success = true;
-    }
+    delete password;
+    delete ssid;
   }
 
   return(success);
