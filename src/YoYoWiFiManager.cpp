@@ -954,11 +954,10 @@ String YoYoWiFiManager::getClientsAsJsonString() {
 
 void YoYoWiFiManager::getClientsAsJson(JsonDocument& jsonDoc) {
   JsonArray clients = jsonDoc.createNestedArray();
- 
-  char *ipAddress = new char[17];
-  char *macAddress = new char[18];
 
   if(currentMode == YY_MODE_PEER_SERVER) {
+    char *ipAddress = new char[17];
+    char *macAddress = new char[18];
     tcpip_adapter_sta_info_t station;
 
     int clientCount = updateClientList();
@@ -970,16 +969,16 @@ void YoYoWiFiManager::getClientsAsJson(JsonDocument& jsonDoc) {
       client["IP"] = ipAddress;
       client["MAC"] = macAddress; 
     }
+
+    delete ipAddress;
+    delete macAddress;
   }
   else if(currentMode == YY_MODE_PEER_CLIENT) {
-    //TODO - reques from server?
+    //Empty
   }
   else if(currentMode == YY_MODE_CLIENT) {
-    //TODO - empty?
+    //Empty
   }
-
-  delete ipAddress;
-  delete macAddress;
 }
 
 int YoYoWiFiManager::updateClientList() {
