@@ -70,6 +70,7 @@ class YoYoWiFiManager : public AsyncWebHandler {
 
     char peerNetworkSSID[SSID_MAX_LENGTH + 1];
     char peerNetworkPassword[64];
+    bool peerNetworkSet();
     
     yy_status_t currentStatus = YY_IDLE_STATUS;
 
@@ -138,14 +139,14 @@ class YoYoWiFiManager : public AsyncWebHandler {
     #endif
     tcpip_adapter_sta_list_t adapter_sta_list;
 
-    int POST(const char *server, const char *path, JsonVariant json);
     int POST(const char *server, const char *path, const char *payload);
-    int GET(const char *server, const char *path, JsonDocument &json);
     int GET(const char *server, const char *path, char *payload);
 
     bool setMode(yy_mode_t mode);
 
-    void printModeAndStatus();
+    void printWiFiDiag();
+    void getModeAsString(yy_mode_t mode, char *string);
+    void getStatusAsString(yy_status_t status, char *string);
   public:
     YoYoWiFiManager();
 
@@ -153,6 +154,7 @@ class YoYoWiFiManager : public AsyncWebHandler {
     boolean begin(char const *apName, char const *apPassword = NULL, bool autoconnect = true);
     void end();
     void connect();
+    void connect(char const *ssid, char const *password);
 
     uint8_t loop();
     yy_status_t getStatus();
@@ -188,6 +190,9 @@ class YoYoWiFiManager : public AsyncWebHandler {
 
     bool isEspressif(uint8_t *macAddress);
     void setRootIndexFile(String rootIndexFile);
+
+    int POST(const char *server, const char *path, JsonVariant json);
+    int GET(const char *server, const char *path, JsonDocument &json);
 
   private:
     bool mac_addr_to_c_str(uint8_t *mac, char *str);
