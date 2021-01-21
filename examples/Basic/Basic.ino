@@ -12,6 +12,7 @@ void setup() {
 
   (*settings)["random"] = random(0,100);
   serializeJson((*settings), Serial);
+  Serial.println();
   (*settings).save();
 
   wifiManager.begin("YoYoMachines", "blinkblink");
