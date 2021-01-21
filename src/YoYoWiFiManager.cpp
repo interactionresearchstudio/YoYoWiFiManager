@@ -89,11 +89,12 @@ void YoYoWiFiManager::startWebServer() {
 }
 
 void YoYoWiFiManager::stopWebServer() {
+  //TODO: this is crashing on the ESP8266:
   if(webserver != NULL) {
-    Serial.println("stopWebServer");
-    webserver -> end();
-    delete(webserver);
-    webserver = NULL;
+    // Serial.println("stopWebServer");
+    // webserver -> end();
+    // delete(webserver);
+    // webserver = NULL;
   }
 }
 
@@ -588,7 +589,7 @@ void YoYoWiFiManager::onYoYoCommandGET(AsyncWebServerRequest *request) {
   else {
     AsyncResponseStream *response = request->beginResponseStream("application/json");
 
-    StaticJsonDocument<1024> settingsJsonDoc;
+    DynamicJsonDocument settingsJsonDoc(1024);
     if(yoYoCommandGetHandler) {
       success = yoYoCommandGetHandler(request->url(), settingsJsonDoc.as<JsonVariant>());
     }
@@ -610,28 +611,47 @@ void YoYoWiFiManager::onYoYoCommandGET(AsyncWebServerRequest *request) {
 }
 
 void YoYoWiFiManager::onYoYoCommandPOST(AsyncWebServerRequest *request, uint8_t *data, size_t len) {
-  //TODO: this limit seems artificial
-  char *json = new char[1024];
-  len = min(len, (unsigned int) 1024-1);
-  int i = 0;
-  for (; i < len; i++)  json[i] = char(data[i]);
-  json[i+1] = '\0';
+  if(request -> contentType().equals("application/json")){
+    //TODO: this limit seems artificial
+    char *json = new char[1024];
+    len = min(len, (unsigned int) 1024-1);
+    int i = 0;
+    for (; i < len; i++)  json[i] = char(data[i]);
+    json[i+1] = '\0';
 
-  StaticJsonDocument<1024> jsonDoc;
-  if (!deserializeJson(jsonDoc, json)) {
-    onYoYoCommandPOST(request, jsonDoc.as<JsonVariant>());
+    DynamicJsonDocument jsonDoc(1024);
+    if (!deserializeJson(jsonDoc, json)) {
+      onYoYoCommandPOST(request, jsonDoc.as<JsonVariant>());
+    }
+
+    delete json;
   }
+  else if(request -> contentType().equals("multipart/form-data")) {
+    //FILE UPLOAD
+    request->send(200);
+  }
+  else {
+    Serial.printf("%s\n", request -> contentType().c_str());
+    request->send(400);
+  }
+}
 
-  delete json;
+void YoYoWiFiManager::onYoYoCommandUPLOAD(AsyncWebServerRequest *request, uint8_t *data, size_t len) {
+  if (request->url().equals("/yoyo/upload")) {
+    request->send(200);
+  }
+  else {
+    request->send(404);
+  }
 }
 
 void YoYoWiFiManager::onYoYoCommandPOST(AsyncWebServerRequest *request, JsonVariant json) {
   if (request->url().equals("/yoyo/credentials")) {
     if(setCredentials(request, json)) {
 
-      //broadcastToPeersPOST(request->url(), json);
-      //delay(random(MAX_SYNC_DELAY));  //stop peers that are restarting together becoming synchronised
-      //connect();
+      broadcastToPeersPOST(request->url(), json);
+      delay(random(MAX_SYNC_DELAY));  //stop peers that are restarting together becoming synchronised
+      connect();
     }
   }
   else {
@@ -652,7 +672,7 @@ void YoYoWiFiManager::onYoYoCommandDELETE(AsyncWebServerRequest *request, uint8_
   for (; i < len; i++)  json[i] = char(data[i]);
   json[i+1] = '\0';
 
-  StaticJsonDocument<1024> jsonDoc;
+  DynamicJsonDocument jsonDoc(1024);
   if (!deserializeJson(jsonDoc, json)) {
     onYoYoCommandDELETE(request, jsonDoc.as<JsonVariant>());
   }
@@ -782,7 +802,7 @@ void YoYoWiFiManager::getCredentials(AsyncWebServerRequest *request) {
 String YoYoWiFiManager::getCredentialsAsJsonString() {
   String jsonString;
 
-  StaticJsonDocument<1024> jsonDoc;
+  DynamicJsonDocument jsonDoc(1024);
   getCredentialsAsJson(jsonDoc);
 
   if(!jsonDoc.isNull()) {
@@ -838,8 +858,6 @@ bool YoYoWiFiManager::setCredentials(JsonVariant json) {
   bool success = false;
 
   if(settings) {
-    serializeJson(json, Serial);
-
     char *ssid = new char[32];
     char *password = new char[64];
 
@@ -868,7 +886,7 @@ void YoYoWiFiManager::getPeers(AsyncWebServerRequest * request) {
 String YoYoWiFiManager::getPeersAsJsonString() {
   String jsonString;
 
-  StaticJsonDocument<1000> jsonDoc;
+  DynamicJsonDocument jsonDoc(1000);
   getPeersAsJson(jsonDoc);
   
   if(!jsonDoc.isNull()) {
@@ -1008,7 +1026,7 @@ void YoYoWiFiManager::getClients(AsyncWebServerRequest * request) {
 String YoYoWiFiManager::getClientsAsJsonString() {
   String jsonString;
 
-  StaticJsonDocument<1000> jsonDoc;
+  DynamicJsonDocument jsonDoc(1000);
   getClientsAsJson(jsonDoc);
   serializeJson(jsonDoc[0], jsonString);
 
@@ -1107,7 +1125,7 @@ void YoYoWiFiManager::getNetworks(AsyncWebServerRequest * request) {
 String YoYoWiFiManager::getNetworksAsJsonString() {
   String jsonString;
 
-  StaticJsonDocument<1000> jsonDoc;
+  DynamicJsonDocument jsonDoc(1000);
   getNetworksAsJson(jsonDoc);
   serializeJson(jsonDoc[0], jsonString);
 
