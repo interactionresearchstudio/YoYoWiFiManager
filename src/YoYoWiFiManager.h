@@ -139,8 +139,8 @@ class YoYoWiFiManager : public AsyncWebHandler {
     #endif
     tcpip_adapter_sta_list_t adapter_sta_list;
 
-    int POST(const char *server, const char *path, const char *payload);
-    int GET(const char *server, const char *path, char *payload);
+    int POST(const char *server, const char *path, const char *payload, char *response = NULL);
+    int GET(const char *server, const char *path, char *response);
 
     bool setMode(yy_mode_t mode);
 
@@ -169,10 +169,15 @@ class YoYoWiFiManager : public AsyncWebHandler {
     void handleBody(AsyncWebServerRequest * request, uint8_t *data, size_t len, size_t index, size_t total);
     void sendFile(AsyncWebServerRequest * request, String path);
     void sendIndexFile(AsyncWebServerRequest * request);
-    String getContentType(String filename);
+    String getMimeType(String filename);
 
     void onYoYoCommandGET(AsyncWebServerRequest *request);
+    void onYoYoCommandPOST(AsyncWebServerRequest *request, uint8_t *data, size_t len);
     void onYoYoCommandPOST(AsyncWebServerRequest *request, JsonVariant json);
+    void onYoYoCommandUPLOAD(AsyncWebServerRequest *request, uint8_t *data, size_t len);
+    void onYoYoCommandDELETE(AsyncWebServerRequest *request, uint8_t *data, size_t len);
+    void onYoYoCommandDELETE(AsyncWebServerRequest *request, JsonVariant json);
+
     bool broadcastToPeersPOST(String path, JsonVariant json);
 
     void getNetworks(AsyncWebServerRequest * request);
@@ -191,8 +196,8 @@ class YoYoWiFiManager : public AsyncWebHandler {
     bool isEspressif(uint8_t *macAddress);
     void setRootIndexFile(String rootIndexFile);
 
-    int POST(const char *server, const char *path, JsonVariant json);
-    int GET(const char *server, const char *path, JsonDocument &json);
+    int POST(const char *server, const char *path, JsonVariant payload, char *response = NULL);
+    int GET(const char *server, const char *path, JsonDocument &response);
 
   private:
     bool mac_addr_to_c_str(uint8_t *mac, char *str);
