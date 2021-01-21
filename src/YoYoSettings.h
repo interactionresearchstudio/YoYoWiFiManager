@@ -50,8 +50,14 @@ class YoYoSettings : public DynamicJsonDocument, public YoYoNetworkSettingsInter
             }
             else {
                 //Add a new network:
-                JsonObject network  = (*this)["credentials"].createNestedObject();
-                success = !network.isNull() && (network["ssid"] = ssid) && (network["password"] = password);
+                JsonVariant network = (*this)["credentials"].createNestedObject();
+                if(!network.isNull() && ssid && password){
+                    //NB ssid and password must be (char *) not (const char *) otherwise only the pointer is copied
+                    network["ssid"] = (char *) ssid;
+                    network["password"] = (char *) password;
+
+                    success = true;
+                }
             }
 
             if(autosave && success) save();
@@ -95,13 +101,17 @@ class YoYoSettings : public DynamicJsonDocument, public YoYoNetworkSettingsInter
         }
 
         void getSSID(int n, char *ssid) {
-            String s = (*this)["credentials"][n]["ssid"];
-            if(s) strcpy(ssid, s.c_str());
+            if(ssid) {
+                ssid[0] = '\0';
+                strcpy(ssid, (*this)["credentials"][n]["ssid"]);
+            }
         }
 
         void getPassword(int n, char *password) {
-            String s = (*this)["credentials"][n]["password"];
-            if(s) strcpy(password, s.c_str());
+            if(password) {
+                password[0] = '\0';
+                strcpy(password, (*this)["credentials"][n]["password"]);
+            }
         }
 
         void setLastNetwork(const char *ssid, bool autosave) {
@@ -142,6 +152,7 @@ class YoYoSettings : public DynamicJsonDocument, public YoYoNetworkSettingsInter
 
             Serial.println("SAVE---SAVE---SAVE---SAVE---SAVE");
             serializeJson(*this, Serial);
+            Serial.println();
 
             EepromStream eepromStream(this -> eepromAddress, this -> eepromCapacityBytes);
             serializeJson(*this, eepromStream);
