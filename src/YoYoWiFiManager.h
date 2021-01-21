@@ -174,6 +174,7 @@ class YoYoWiFiManager : public AsyncWebHandler {
     void onYoYoCommandGET(AsyncWebServerRequest *request);
     void onYoYoCommandPOST(AsyncWebServerRequest *request, uint8_t *data, size_t len);
     void onYoYoCommandPOST(AsyncWebServerRequest *request, JsonVariant json);
+    void onYoYoCommandUPLOAD(AsyncWebServerRequest *request, uint8_t *data, size_t len);
     void onYoYoCommandDELETE(AsyncWebServerRequest *request, uint8_t *data, size_t len);
     void onYoYoCommandDELETE(AsyncWebServerRequest *request, JsonVariant json);
 
