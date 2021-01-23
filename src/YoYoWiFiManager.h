@@ -58,6 +58,7 @@ class YoYoWiFiManager : public AsyncWebHandler {
     YY_MODE_PEER_SERVER
   } yy_mode_t;
   yy_mode_t currentMode = YY_MODE_NONE;
+  yy_mode_t nextMode = YY_MODE_NONE;
 
   private:
     bool running = false;
@@ -81,6 +82,7 @@ class YoYoWiFiManager : public AsyncWebHandler {
     int webServerPort = 80;
     AsyncWebServer *webserver = NULL;
     bool startWebServerOnceConnected = false;
+    int activeRequests = 0;
 
     uint32_t clientTimeOutAtMs = 0;
     void updateClientTimeOut();
@@ -142,7 +144,8 @@ class YoYoWiFiManager : public AsyncWebHandler {
     int POST(const char *server, const char *path, const char *payload, char *contentType, char *response = NULL);
     int GET(const char *server, const char *path, char *response);
 
-    bool setMode(yy_mode_t mode);
+    void setMode(yy_mode_t mode, bool update = false);
+    bool updateMode();
 
     void printWiFiDiag();
     void getModeAsString(yy_mode_t mode, char *string);
