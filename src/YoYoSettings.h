@@ -44,8 +44,8 @@ class YoYoSettings : public DynamicJsonDocument, public YoYoNetworkSettingsInter
 
             int index = getNetwork(ssid);
             if(index >= 0) {
-                //Rewrite the password of an existing network:
-                (*this)["credentials"][index]["password"] = password;
+                //Rewrite the password of an existing network - NB password must be (char *) not (const char *) otherwise only the pointer is copied:
+                (*this)["credentials"][index]["password"] = (char *) password;
                 success = true;
             }
             else {
