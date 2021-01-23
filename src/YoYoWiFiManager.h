@@ -139,7 +139,7 @@ class YoYoWiFiManager : public AsyncWebHandler {
     #endif
     tcpip_adapter_sta_list_t adapter_sta_list;
 
-    int POST(const char *server, const char *path, const char *payload, char *response = NULL);
+    int POST(const char *server, const char *path, const char *payload, char *contentType, char *response = NULL);
     int GET(const char *server, const char *path, char *response);
 
     bool setMode(yy_mode_t mode);

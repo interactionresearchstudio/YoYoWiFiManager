@@ -13,7 +13,7 @@ function preload() {
 }
 
 function setup() {
-  createCanvas(710, 400);
+  createCanvas(400, 400);
 
   // set up the font
   textFont(font);

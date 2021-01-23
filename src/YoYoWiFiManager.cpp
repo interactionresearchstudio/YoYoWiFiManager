@@ -717,7 +717,7 @@ int YoYoWiFiManager::POST(const char *server, const char *path, JsonVariant payl
   String jsonAsString;
   jsonAsString.reserve(payload.memoryUsage());
   if(serializeJson(payload, jsonAsString) > 0) {
-    httpResponseCode = POST(server, path, jsonAsString.c_str(), response);
+    httpResponseCode = POST(server, path, jsonAsString.c_str(), "application/json", response);
     if(response) {
       //TODO: parse json
     }
@@ -726,7 +726,7 @@ int YoYoWiFiManager::POST(const char *server, const char *path, JsonVariant payl
   return(httpResponseCode);
 }
 
-int YoYoWiFiManager::POST(const char *server, const char *path, const char *payload, char *response) {
+int YoYoWiFiManager::POST(const char *server, const char *path, const char *payload, char *contentType, char *response) {
   int httpResponseCode = -1;
 
   String urlAsString = "http://" + String(server) + String(path);
@@ -735,6 +735,7 @@ int YoYoWiFiManager::POST(const char *server, const char *path, const char *payl
   HTTPClient http;
   WiFiClient client;
   http.begin(client, urlAsString);
+  if(contentType) http.addHeader("Content-Type", contentType);
 
   httpResponseCode = http.POST(payload);
 
