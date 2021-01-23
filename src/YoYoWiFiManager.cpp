@@ -37,10 +37,10 @@ boolean YoYoWiFiManager::begin(char const *apName, char const *apPassword, bool 
   if(autoconnect && settings && settings -> hasNetworkCredentials()) {
     Serial.println("network credentials available");
     addKnownNetworks();
-    setMode(YY_MODE_CLIENT);
+    setMode(YY_MODE_CLIENT, true);
   }
   else {
-    setMode(YY_MODE_PEER_CLIENT); //attempt to join peer network;
+    setMode(YY_MODE_PEER_CLIENT, true); //attempt to join peer network;
   }
 
   return(true);
@@ -189,8 +189,9 @@ uint8_t YoYoWiFiManager::loop() {
   yy_status_t yyStatus = (yy_status_t) WiFi.status();
 
   if(running) {
+    updateMode();
     yyStatus = getStatus();
-
+    
     //Only when the status changes:
     if(currentStatus != yyStatus) {
       char *currentStatusString = new char[32];
@@ -204,7 +205,7 @@ uint8_t YoYoWiFiManager::loop() {
         //implicitly in YY_MODE_CLIENT
         case YY_CONNECTED:
           if(WiFi.SSID().equals(peerNetworkSSID)) {
-            setMode(YY_MODE_PEER_CLIENT);
+            setMode(YY_MODE_PEER_CLIENT, true);
           }
           else {
             blinkWiFiLED(3);
@@ -226,7 +227,7 @@ uint8_t YoYoWiFiManager::loop() {
         case YY_CONNECTED_PEER_SERVER:
         break;
         case YY_CONNECTION_LOST:
-          setMode(YY_MODE_CLIENT);
+          setMode(YY_MODE_CLIENT, true);
         break;
         case YY_DISCONNECTED:
         break;
@@ -234,7 +235,7 @@ uint8_t YoYoWiFiManager::loop() {
       currentStatus = yyStatus;
     }
 
-    setMode(updateTimeOuts());
+    setMode(updateTimeOuts(), true);
 
     //Everytime for each mode:
     switch(currentMode) {
@@ -261,18 +262,30 @@ bool YoYoWiFiManager::peerNetworkSet() {
   return(peerNetworkSSID[0] != NULL);
 }
 
-bool YoYoWiFiManager::setMode(yy_mode_t mode) {
+void YoYoWiFiManager::setMode(yy_mode_t mode, bool update) {
+  nextMode = mode;
+  if(update) updateMode();
+}
+
+bool YoYoWiFiManager::updateMode() {
   bool result = false;
 
-  if(mode != currentMode) {
-    char *currentModeString = new char[32];
-    char *modeString = new char[32];
-    getModeAsString(currentMode, currentModeString);
-    getModeAsString(mode, modeString);
-    Serial.printf("MODE:\t%s\t>\t%s\n", currentModeString, modeString);
-    delete currentModeString, modeString;
+  if(activeRequests > 0) {
+    //waiting for activeRequests to complete
+    return(false);
+  }
 
-    switch(mode) {
+  if(nextMode != currentMode) {
+    delay(300);  //Allow any final transactions to complete before mode changes
+
+    char *currentModeString = new char[32];
+    char *nextModeString = new char[32];
+    getModeAsString(currentMode, currentModeString);
+    getModeAsString(nextMode, nextModeString);
+    Serial.printf("MODE:\t%s\t>\t%s\n", currentModeString, nextModeString);
+    delete currentModeString, nextModeString;
+
+    switch(nextMode) {
       case YY_MODE_NONE:
         break;
       case YY_MODE_CLIENT:
@@ -299,7 +312,7 @@ bool YoYoWiFiManager::setMode(yy_mode_t mode) {
     }
 
     //To new mode:
-    switch(mode) {
+    switch(nextMode) {
       case YY_MODE_NONE:
         break;
       case YY_MODE_CLIENT:
@@ -308,6 +321,7 @@ bool YoYoWiFiManager::setMode(yy_mode_t mode) {
         Serial.println("about to start server...");
         if(startWebServerOnceConnected) startWebServer();
         else stopWebServer();
+        delay(random(MAX_SYNC_DELAY));  //stop peers that are attempting to find a network from becoming synchronised
         break;
       case YY_MODE_PEER_CLIENT: 
         updateClientTimeOut();
@@ -322,7 +336,7 @@ bool YoYoWiFiManager::setMode(yy_mode_t mode) {
         startWebServer();
         break;
     }
-    currentMode = mode;
+    currentMode = nextMode;
 
     printWiFiDiag();
     result = true;
@@ -465,6 +479,8 @@ void YoYoWiFiManager::handleRequest(AsyncWebServerRequest *request) {
   Serial.print("handleRequest: ");
   Serial.println(request->url());
 
+  activeRequests++;
+
   if (request->method() == HTTP_GET) {
     if(request->url().startsWith("/yoyo")) {
       onYoYoCommandGET(request);
@@ -491,6 +507,8 @@ void YoYoWiFiManager::handleRequest(AsyncWebServerRequest *request) {
   else {
     request->send(400);
   }
+
+  activeRequests--;
 }
 
 void YoYoWiFiManager::handleCaptivePortalRequest(AsyncWebServerRequest *request) {
@@ -517,6 +535,8 @@ void YoYoWiFiManager::handleBody(AsyncWebServerRequest * request, uint8_t *data,
   Serial.print("handleBody: ");
   Serial.println(request->url());
 
+  activeRequests++;
+
   if (request->method() == HTTP_GET) {
     request->send(400); //GETs are expected to have no body and then be processes by handleRequest()
   }
@@ -535,6 +555,8 @@ void YoYoWiFiManager::handleBody(AsyncWebServerRequest * request, uint8_t *data,
   else {
     request->send(400);
   }
+
+  activeRequests--;
 }
 
 void YoYoWiFiManager::sendFile(AsyncWebServerRequest * request, String path) {
@@ -631,7 +653,7 @@ void YoYoWiFiManager::onYoYoCommandPOST(AsyncWebServerRequest *request, uint8_t 
     request->send(200);
   }
   else {
-    Serial.printf("%s\n", request -> contentType().c_str());
+    Serial.printf("unknown content type: %s\n", request -> contentType().c_str());
     request->send(400);
   }
 }
@@ -650,8 +672,7 @@ void YoYoWiFiManager::onYoYoCommandPOST(AsyncWebServerRequest *request, JsonVari
     if(setCredentials(request, json)) {
 
       broadcastToPeersPOST(request->url(), json);
-      delay(random(MAX_SYNC_DELAY));  //stop peers that are restarting together becoming synchronised
-      connect();
+      connect();  //this requests YY_MODE_CLIENT mode - which will be accessed on next loop() call
     }
   }
   else {
