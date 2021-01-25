@@ -31,8 +31,10 @@
 #define SSID_MAX_LENGTH 31
 #define WIFICLIENTTIMEOUT 20000
 #define WIFISERVERTIMEOUT 60000
-#define MAX_SYNC_DELAY 3000
+#define MAX_SYNC_DELAY 15000
 #define SCAN_NETWORKS_MIN_INT 30000
+#define MIN_CLIENTLISTUPDATEINTERVAL 3000
+#define MIN_STATUSUPDATEINTERVAL 1000
 
 typedef enum {
   //compatibility with wl_status_t (wl_definitions.h)
@@ -74,6 +76,7 @@ class YoYoWiFiManager : public AsyncWebHandler {
     bool peerNetworkSet();
     
     yy_status_t currentStatus = YY_IDLE_STATUS;
+    uint32_t lastUpdatedStatusAtMs = 0;
 
     const byte DNS_PORT = 53;
     DNSServer dnsServer;
@@ -87,6 +90,9 @@ class YoYoWiFiManager : public AsyncWebHandler {
     uint32_t clientTimeOutAtMs = 0;
     void updateClientTimeOut();
     bool clientHasTimedOut();
+
+    int currentClientCount = 0;
+    uint32_t lastUpdatedClientListAtMs = 0;
 
     uint32_t serverTimeOutAtMs = 0;
     void updateServerTimeOut();
@@ -181,6 +187,7 @@ class YoYoWiFiManager : public AsyncWebHandler {
     void onYoYoCommandDELETE(AsyncWebServerRequest *request, uint8_t *data, size_t len);
     void onYoYoCommandDELETE(AsyncWebServerRequest *request, JsonVariant json);
 
+    bool broadcastToPeersPOST(char *path, JsonVariant json);
     bool broadcastToPeersPOST(String path, JsonVariant json);
 
     void getNetworks(AsyncWebServerRequest * request);
