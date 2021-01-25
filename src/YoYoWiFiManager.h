@@ -110,7 +110,7 @@ class YoYoWiFiManager : public AsyncWebHandler {
     typedef void (*voidCallbackPtr)();
     voidCallbackPtr onYY_CONNECTEDhandler = NULL;
 
-    typedef bool (*jsonCallbackPtr)(const String&, JsonVariant);
+    typedef bool (*jsonCallbackPtr)(JsonVariant);
     jsonCallbackPtr yoYoCommandGetHandler = NULL;
     jsonCallbackPtr yoYoCommandPostHandler = NULL;
 
@@ -177,26 +177,7 @@ class YoYoWiFiManager : public AsyncWebHandler {
     void handleRequest(AsyncWebServerRequest *request);
     void handleCaptivePortalRequest(AsyncWebServerRequest *request);
     void handleBody(AsyncWebServerRequest * request, uint8_t *data, size_t len, size_t index, size_t total);
-    void sendFile(AsyncWebServerRequest * request, String path);
-    void sendIndexFile(AsyncWebServerRequest * request);
-    String getMimeType(String filename);
 
-    void onYoYoCommandGET(AsyncWebServerRequest *request);
-    void onYoYoCommandPOST(AsyncWebServerRequest *request, uint8_t *data, size_t len);
-    void onYoYoCommandPOST(AsyncWebServerRequest *request, JsonVariant json);
-    void onYoYoCommandUPLOAD(AsyncWebServerRequest *request, uint8_t *data, size_t len);
-    void onYoYoCommandDELETE(AsyncWebServerRequest *request, uint8_t *data, size_t len);
-    void onYoYoCommandDELETE(AsyncWebServerRequest *request, JsonVariant json);
-
-    bool broadcastToPeersPOST(char *path, JsonVariant json);
-    bool broadcastToPeersPOST(String path, JsonVariant json);
-
-    void getNetworks(AsyncWebServerRequest * request);
-    void getClients(AsyncWebServerRequest * request);
-    void getPeers(AsyncWebServerRequest * request);
-    void getCredentials(AsyncWebServerRequest *request);
-    
-    bool setCredentials(AsyncWebServerRequest *request, JsonVariant json);
     bool setCredentials(JsonVariant json);
 
     bool hasPeers();
@@ -215,6 +196,28 @@ class YoYoWiFiManager : public AsyncWebHandler {
     int getOUI(char *mac);
     int getOUI(uint8_t *mac);
     int getOUI(uint8_t a, uint8_t b, uint8_t c, uint8_t d = 0, uint8_t e = 0, uint8_t f = 0);
+
+    void sendFile(AsyncWebServerRequest * request, String path);
+    void sendIndexFile(AsyncWebServerRequest * request);
+    String getMimeType(String filename);
+
+    void onYoYoRequestGET(AsyncWebServerRequest *request);
+    void onYoYoRequestPOST(uint8_t *data, size_t len, AsyncWebServerRequest *request);
+    void onYoYoRequestUPLOAD(uint8_t *data, size_t len, AsyncWebServerRequest *request);
+    void onYoYoRequestDELETE(uint8_t *data, size_t len, AsyncWebServerRequest *request);
+    
+    void onYoYoMessageGET(AsyncWebServerRequest *request);
+    void onYoYoMessagePOST(JsonVariant message, AsyncWebServerRequest *request);
+    void onYoYoMessageDELETE(JsonVariant message, AsyncWebServerRequest *request);
+
+    bool broadcastToPeersPOST(JsonVariant message);
+
+    void getNetworks(AsyncWebServerRequest *request);
+    void getClients(AsyncWebServerRequest *request);
+    void getPeers(AsyncWebServerRequest *request);
+    void getCredentials(AsyncWebServerRequest *request);
+    
+    bool setCredentials(JsonVariant message, AsyncWebServerRequest *request);
 };
 
 #endif
