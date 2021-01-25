@@ -15,7 +15,7 @@ void YoYoWiFiManager::init(YoYoNetworkSettingsInterface *settings, voidCallbackP
   this -> wifiLEDPin = wifiLEDPin;
   pinMode(wifiLEDPin, OUTPUT);
 
-  WiFi.persistent(false); //YoYoWiFiManager manages the persistents of networks itself
+  WiFi.persistent(false); //YoYoWiFiManager manages the persistence of networks itself
 
   #if defined(ESP32)
     memset(&wifi_sta_list, 0, sizeof(wifi_sta_list));
@@ -26,6 +26,8 @@ void YoYoWiFiManager::init(YoYoNetworkSettingsInterface *settings, voidCallbackP
 
   peerNetworkSSID[0] = NULL;
   peerNetworkPassword[0] = NULL;
+
+  randomSeed(getChipId());
 }
 
 boolean YoYoWiFiManager::begin(char const *apName, char const *apPassword, bool autoconnect) {
@@ -48,6 +50,20 @@ boolean YoYoWiFiManager::begin(char const *apName, char const *apPassword, bool 
 
 void YoYoWiFiManager::end() {
   running = false;
+}
+
+uint32_t YoYoWiFiManager::getChipId() {
+  uint32_t chipId = 0;
+
+  #if defined(ESP8266)
+    chipId = ESP.getChipId();
+
+  #elif defined(ESP32)
+    chipId = (uint32_t) ESP.getEfuseMac();
+
+  #endif
+
+  return(chipId);
 }
 
 void YoYoWiFiManager::connect(char const *ssid, char const *password) {
