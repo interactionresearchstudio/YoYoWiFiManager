@@ -167,6 +167,7 @@ class YoYoWiFiManager : public AsyncWebHandler {
 
     uint8_t loop();
     yy_status_t getStatus();
+    uint32_t getChipId();
 
     void blinkWiFiLED(int count);
     bool findNetwork(char const *ssid, char *matchingSSID, bool autocomplete = false, bool autocorrect = false, int autocorrectError = 0);
