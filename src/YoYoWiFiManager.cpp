@@ -166,20 +166,24 @@ bool YoYoWiFiManager::findNetwork(char const *ssid, char *matchingSSID, bool aut
 }
 
 yy_status_t YoYoWiFiManager::getStatus() {
-  uint8_t wlStatus = (currentMode == YY_MODE_PEER_SERVER) ?  WiFi.status() : wifiMulti.run();
   yy_status_t yyStatus = currentStatus;
 
-  if(wlStatus == WL_CONNECTED) {
-    switch(currentMode) {
-      case YY_MODE_CLIENT:      yyStatus = YY_CONNECTED; break;
-      case YY_MODE_PEER_CLIENT: yyStatus = YY_CONNECTED_PEER_CLIENT; break;
+  if(millis() > (lastUpdatedStatusAtMs + MIN_STATUSUPDATEINTERVAL)) {
+    uint8_t wlStatus = (currentMode == YY_MODE_PEER_SERVER) ?  WiFi.status() : wifiMulti.run();
+    
+    if(wlStatus == WL_CONNECTED) {
+      switch(currentMode) {
+        case YY_MODE_CLIENT:      yyStatus = YY_CONNECTED; break;
+        case YY_MODE_PEER_CLIENT: yyStatus = YY_CONNECTED_PEER_CLIENT; break;
+      }
     }
-  }
-  else if(currentMode == YY_MODE_PEER_SERVER && hasClients()) {
-    yyStatus = YY_CONNECTED_PEER_SERVER;
-  }
-  else {
-    yyStatus = (yy_status_t) wlStatus;  //Otherwise yy_status_t and wl_status_t are value compatible
+    else if(currentMode == YY_MODE_PEER_SERVER && hasClients()) {
+      yyStatus = YY_CONNECTED_PEER_SERVER;
+    }
+    else {
+      yyStatus = (yy_status_t) wlStatus;  //Otherwise yy_status_t and wl_status_t are value compatible
+    }
+    lastUpdatedStatusAtMs = millis();
   }
 
   return(yyStatus);
@@ -316,17 +320,18 @@ bool YoYoWiFiManager::updateMode() {
       case YY_MODE_NONE:
         break;
       case YY_MODE_CLIENT:
-        updateClientTimeOut();
         WiFi.mode(WIFI_STA);
         Serial.println("about to start server...");
         if(startWebServerOnceConnected) startWebServer();
         else stopWebServer();
         delay(random(MAX_SYNC_DELAY));  //stop peers that are attempting to find a network from becoming synchronised
+        updateClientTimeOut();
         break;
       case YY_MODE_PEER_CLIENT: 
-        updateClientTimeOut();
         WiFi.mode(WIFI_STA);
         startWebServer();
+        delay(random(MAX_SYNC_DELAY));
+        updateClientTimeOut();
         break;
       case YY_MODE_PEER_SERVER:
         updateServerTimeOut();
@@ -668,21 +673,32 @@ void YoYoWiFiManager::onYoYoCommandUPLOAD(AsyncWebServerRequest *request, uint8_
 }
 
 void YoYoWiFiManager::onYoYoCommandPOST(AsyncWebServerRequest *request, JsonVariant json) {
-  if (request->url().equals("/yoyo/credentials")) {
-    if(setCredentials(request, json)) {
+  bool success = false;
+  bool broadcastToPeers = false;
+  
+  char *path = new char[32];
+  strcpy(path, request->url().c_str());
 
-      broadcastToPeersPOST(request->url(), json);
+  if (strcmp(path, "/yoyo/credentials")  == 0) {
+    if(setCredentials(request, json)) {
       connect();  //this requests YY_MODE_CLIENT mode - which will be accessed on next loop() call
+      broadcastToPeers = true;
+      success = true;
     }
   }
   else {
-    bool success = false;
-
     if(yoYoCommandPostHandler) {
       success = yoYoCommandPostHandler(request->url(), json);
+      if(success) broadcastToPeers = true;
     }
     request->send(success ? 200 : 404);
   }
+  //when the response is sent, the client is closed and freed from the memory
+
+  if(success && broadcastToPeers) {
+    broadcastToPeersPOST(path, json);
+  }
+  delete path;
 }
 
 void YoYoWiFiManager::onYoYoCommandDELETE(AsyncWebServerRequest *request, uint8_t *data, size_t len) {
@@ -713,6 +729,10 @@ void YoYoWiFiManager::onYoYoCommandDELETE(AsyncWebServerRequest *request, JsonVa
 }
 
 bool YoYoWiFiManager::broadcastToPeersPOST(String path, JsonVariant json) {
+  return(broadcastToPeersPOST(path.c_str(), json));
+}
+
+bool YoYoWiFiManager::broadcastToPeersPOST(char *path, JsonVariant json) {
   bool result = false;
 
   if(currentMode == YY_MODE_PEER_SERVER) {
@@ -723,7 +743,7 @@ bool YoYoWiFiManager::broadcastToPeersPOST(String path, JsonVariant json) {
       IPAddress *ipAddress = new IPAddress();
       for (int i = 0; i < peerCount; i++) {
         getPeerN(i, ipAddress, NULL);
-        POST(ipAddress -> toString().c_str(), path.c_str(), json);
+        POST(ipAddress -> toString().c_str(), path, json);
       }
       delete ipAddress;
     }
@@ -908,7 +928,7 @@ void YoYoWiFiManager::getPeers(AsyncWebServerRequest * request) {
 String YoYoWiFiManager::getPeersAsJsonString() {
   String jsonString;
 
-  DynamicJsonDocument jsonDoc(1000);
+  DynamicJsonDocument jsonDoc(1024);
   getPeersAsJson(jsonDoc);
   
   if(!jsonDoc.isNull()) {
@@ -1048,7 +1068,7 @@ void YoYoWiFiManager::getClients(AsyncWebServerRequest * request) {
 String YoYoWiFiManager::getClientsAsJsonString() {
   String jsonString;
 
-  DynamicJsonDocument jsonDoc(1000);
+  DynamicJsonDocument jsonDoc(1024);
   getClientsAsJson(jsonDoc);
   serializeJson(jsonDoc[0], jsonString);
 
@@ -1087,37 +1107,44 @@ void YoYoWiFiManager::getClientsAsJson(JsonDocument& jsonDoc) {
 int YoYoWiFiManager::updateClientList() {
   int count = 0;
 
-  if(currentMode == YY_MODE_PEER_SERVER) {
-    #if defined(ESP8266)
-      struct station_info *stat_info;
+  if(millis() > lastUpdatedClientListAtMs + MIN_CLIENTLISTUPDATEINTERVAL) {
+    if(currentMode == YY_MODE_PEER_SERVER) {
+      #if defined(ESP8266)
+        struct station_info *stat_info;
 
-      count = min(wifi_softap_get_station_num(), (uint8) ESP_WIFI_MAX_CONN_NUM);
-      stat_info = wifi_softap_get_station_info();
+        count = min(wifi_softap_get_station_num(), (uint8) ESP_WIFI_MAX_CONN_NUM);
+        stat_info = wifi_softap_get_station_info();
 
-      adapter_sta_list.num = count;
+        adapter_sta_list.num = count;
 
-      int n=0;
-      tcpip_adapter_sta_info_t station;
-      while (count > 0 && stat_info != NULL) {
-        memcpy(adapter_sta_list.sta[n].mac, stat_info->bssid, sizeof(stat_info->bssid[0])*6);
-        adapter_sta_list.sta[n].ip = stat_info->ip;
+        int n=0;
+        tcpip_adapter_sta_info_t station;
+        while (count > 0 && stat_info != NULL) {
+          memcpy(adapter_sta_list.sta[n].mac, stat_info->bssid, sizeof(stat_info->bssid[0])*6);
+          adapter_sta_list.sta[n].ip = stat_info->ip;
 
-        stat_info = STAILQ_NEXT(stat_info, next);
-        n++;
-      }
-      wifi_softap_free_station_info();
+          stat_info = STAILQ_NEXT(stat_info, next);
+          n++;
+        }
+        wifi_softap_free_station_info();
 
-    #elif defined(ESP32)
-      esp_wifi_ap_get_sta_list(&wifi_sta_list);
-      tcpip_adapter_get_sta_list(&wifi_sta_list, &adapter_sta_list);
-      count = adapter_sta_list.num;
-    #endif
+      #elif defined(ESP32)
+        esp_wifi_ap_get_sta_list(&wifi_sta_list);
+        tcpip_adapter_get_sta_list(&wifi_sta_list, &adapter_sta_list);
+        count = adapter_sta_list.num;
+      #endif
+    }
+    else if(currentMode == YY_MODE_PEER_CLIENT) {
+      //NOTHING TO DO
+    }
+    else if(currentMode == YY_MODE_CLIENT) {
+      //NOTHING TO DO
+    }
+    currentClientCount = count;
+    lastUpdatedClientListAtMs = millis();
   }
-  else if(currentMode == YY_MODE_PEER_CLIENT) {
-    //NOTHING TO DO
-  }
-  else if(currentMode == YY_MODE_CLIENT) {
-    //NOTHING TO DO
+  else {
+    count = currentClientCount;
   }
 
   return(count);
@@ -1147,7 +1174,7 @@ void YoYoWiFiManager::getNetworks(AsyncWebServerRequest * request) {
 String YoYoWiFiManager::getNetworksAsJsonString() {
   String jsonString;
 
-  DynamicJsonDocument jsonDoc(1000);
+  DynamicJsonDocument jsonDoc(1024);
   getNetworksAsJson(jsonDoc);
   serializeJson(jsonDoc[0], jsonString);
 
