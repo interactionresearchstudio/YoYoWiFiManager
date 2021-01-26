@@ -64,6 +64,7 @@ class YoYoWiFiManager : public AsyncWebHandler {
 
   private:
     bool running = false;
+    StaticJsonDocument<8192> broadcastMessageList;   //TODO: this should be dynamic?
 
     #if defined(ESP8266)
       ESP8266WiFiMulti wifiMulti;
@@ -210,7 +211,9 @@ class YoYoWiFiManager : public AsyncWebHandler {
     void onYoYoMessagePOST(JsonVariant message, AsyncWebServerRequest *request);
     void onYoYoMessageDELETE(JsonVariant message, AsyncWebServerRequest *request);
 
-    bool broadcastToPeersPOST(JsonVariant message);
+    void addBroadcastMessage(JsonVariant message);
+    void processBroadcastMessageList();
+    bool broadcastMessage(JsonVariant message);
 
     void getNetworks(AsyncWebServerRequest *request);
     void getClients(AsyncWebServerRequest *request);
