@@ -700,7 +700,10 @@ void YoYoWiFiManager::onYoYoMessagePOST(JsonVariant message, AsyncWebServerReque
   bool success = false;
   Serial.println("onYoYoMessagePOST: " + message["path"].as<String>());
 
-  if (message["path"] == "/yoyo/credentials") {
+  if (message["path"] == "/yoyo/broadcast") {
+    //TODO: request to broadcast a message from a peer - 404 unless YY_MODE_PEER_SERVER
+  }
+  else if (message["path"] == "/yoyo/credentials") {
     if(setCredentials(message["payload"], request)) {
       message["broadcast"] = true;
       connect();  //this requests YY_MODE_CLIENT mode - which will be accessed on next loop() call
