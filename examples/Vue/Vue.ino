@@ -42,7 +42,8 @@ void setup() {
   pinMode(LED_GREEN_PIN, OUTPUT);
   pinMode(LED_BLUE_PIN, OUTPUT);
 
-  pinMode(BUTTON_PIN, INPUT_PULLUP);
+  pinMode(BUTTON_PIN, INPUT);
+  button.init(BUTTON_PIN, LOW);
   ButtonConfig* buttonConfig = button.getButtonConfig();
   buttonConfig->setEventHandler(handleButtonEvent);
 }
