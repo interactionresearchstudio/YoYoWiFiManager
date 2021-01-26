@@ -8,7 +8,7 @@ void setup() {
   Serial.begin(115200);
 
   settings = new YoYoSettings(512); //Settings must be created here in Setup() as contains call to EEPROM.begin() which will otherwise fail
-  wifiManager.init(settings, onceConnected, onYoYoCommandGET, onYoYoCommandPOST, true);
+  wifiManager.init(settings, onceConnected, onYoYoMessageGET, onYoYoMessagePOST, true);
 
   wifiManager.begin("YoYoMachines", "blinkblink", true);
 }
@@ -44,37 +44,36 @@ void loop() {
   }
 }
 
-bool onYoYoCommandGET(const String &url, JsonVariant json) {
+bool onYoYoMessageGET(JsonVariant message) {
   bool success = false;
 
-  Serial.println("onYoYoCommandGET " + url);
+  Serial.println("onYoYoCommandGET " + message["path"].as<String>());
   
-  if(url.equals("/yoyo/settings") && settings) {
+  if(message["path"] == "/yoyo/settings" && settings) {
+    message["payload"].set(*settings);
     success = true;
-    json.set(*settings);
   }
 
   return(success);
 }
 
-bool onYoYoCommandPOST(const String &url, JsonVariant json) {
+bool onYoYoMessagePOST(JsonVariant message) {
   bool success = false;
   
-  Serial.println("onYoYoCommandPOST " + url);
-  serializeJson(json, Serial);
+  Serial.println("onYoYoCommandPOST " + message["path"].as<String>());
+  serializeJson(message, Serial);
 
   //define an alternative to using the built-in /yoyo/credentials endpoint that also allows custom value to be set in the settings doc
-  if(url.equals("/yoyo/settings")) {
+  if(message["path"] == "/yoyo/settings") {
     //TODO: merge settings doc with values from the payload
     //(*settings)["name"] = "value";
     
-    success = wifiManager.setCredentials(json);
+    success = wifiManager.setCredentials(message["payload"]);
     if(success) {
-      wifiManager.broadcastToPeersPOST(url, json);
+      (*settings).save();
       wifiManager.connect();
+      message["broadcast"] = true;
     }
-    
-    (*settings).save();
   }
 
   return(success);
