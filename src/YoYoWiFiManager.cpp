@@ -271,6 +271,7 @@ uint8_t YoYoWiFiManager::loop() {
       case YY_MODE_PEER_SERVER:
         digitalWrite(wifiLEDPin, HIGH);
         dnsServer.processNextRequest();
+        processBroadcastMessageList();
         break;
     }
   }
@@ -667,7 +668,8 @@ void YoYoWiFiManager::onYoYoRequestPOST(uint8_t *data, size_t len, AsyncWebServe
 
     DynamicJsonDocument message(1024);
     DynamicJsonDocument payload(1024);
-    if (!deserializeJson(payload, json)) {
+    //NB cast to (const char*) forces a copy by value as will shortly delete json object:
+    if(deserializeJson(payload, (const char*)json) == DeserializationError::Ok) {
       message["payload"] = payload;
       message["path"] = (char *) request->url().c_str();
       message["method"] = "POST";
@@ -720,8 +722,39 @@ void YoYoWiFiManager::onYoYoMessagePOST(JsonVariant message, AsyncWebServerReque
   //when the response is sent, the client is closed and freed from the memory
 
   if(success && message["broadcast"] == true) {
-    broadcastToPeersPOST(message);
+    addBroadcastMessage(message);
   }
+}
+
+void YoYoWiFiManager::addBroadcastMessage(JsonVariant message) {
+  broadcastMessageList.add(message);
+}
+
+void YoYoWiFiManager::processBroadcastMessageList() {
+  if(!broadcastMessageList.isNull() && broadcastMessageList.size() > 0) {
+    broadcastMessage(broadcastMessageList[0]);
+    broadcastMessageList.remove(0);
+  }
+}
+
+bool YoYoWiFiManager::broadcastMessage(JsonVariant message) {
+  bool result = false;
+
+  if(currentMode == YY_MODE_PEER_SERVER) {
+    int peerCount = countPeers();
+
+    if(peerCount > 0) {
+      result = true;
+      IPAddress *ipAddress = new IPAddress();
+      for (int i = 0; i < peerCount; i++) {
+        getPeerN(i, ipAddress, NULL);
+        POST(ipAddress -> toString().c_str(), message["path"], message["payload"]);
+      }
+      delete ipAddress;
+    }
+  }
+
+  return(result);
 }
 
 void YoYoWiFiManager::onYoYoRequestDELETE(uint8_t *data, size_t len, AsyncWebServerRequest *request) {
@@ -754,26 +787,6 @@ void YoYoWiFiManager::onYoYoMessageDELETE(JsonVariant message, AsyncWebServerReq
   }
 
   request->send(success ? 200 : 404);
-}
-
-bool YoYoWiFiManager::broadcastToPeersPOST(JsonVariant message) {
-  bool result = false;
-
-  if(currentMode == YY_MODE_PEER_SERVER) {
-    int peerCount = countPeers();
-
-    if(peerCount > 0) {
-      result = true;
-      IPAddress *ipAddress = new IPAddress();
-      for (int i = 0; i < peerCount; i++) {
-        getPeerN(i, ipAddress, NULL);
-        POST(ipAddress -> toString().c_str(), message["path"], message["payload"]);
-      }
-      delete ipAddress;
-    }
-  }
-
-  return(result);
 }
 
 int YoYoWiFiManager::POST(const char *server, const char *path, JsonVariant payload, char *response) {
