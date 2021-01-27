@@ -28,6 +28,19 @@
 #include "YoYoWiFiManager/Espressif.h"
 #include "YoYoWiFiManager/index_html.h"
 
+#if defined(ESP8266)
+    #ifndef LED_BUILTIN 
+      #define LED_BUILTIN  2
+    #endif
+    #define LED_BUILTIN_ON LOW
+#elif defined(ESP32)
+    #ifndef LED_BUILTIN 
+      #define LED_BUILTIN  2
+    #endif
+    #define LED_BUILTIN_ON HIGH
+#endif
+
+
 #define SSID_MAX_LENGTH 31
 #define WIFICLIENTTIMEOUT 20000
 #define WIFISERVERTIMEOUT 60000
@@ -105,6 +118,7 @@ class YoYoWiFiManager : public AsyncWebHandler {
 
     YoYoNetworkSettingsInterface *settings = NULL;
     uint8_t wifiLEDPin;
+    bool wifiLEDOn;
 
     bool SPIFFS_ENABLED = false;
 
@@ -160,7 +174,7 @@ class YoYoWiFiManager : public AsyncWebHandler {
   public:
     YoYoWiFiManager();
 
-    void init(YoYoNetworkSettingsInterface *settings = NULL, voidCallbackPtr onYY_CONNECTEDhandler = NULL, jsonCallbackPtr getHandler = NULL, jsonCallbackPtr postHandler = NULL, bool startWebServerOnceConnected = false, int webServerPort = 80, uint8_t wifiLEDPin = 2);
+    void init(YoYoNetworkSettingsInterface *settings = NULL, voidCallbackPtr onYY_CONNECTEDhandler = NULL, jsonCallbackPtr getHandler = NULL, jsonCallbackPtr postHandler = NULL, bool startWebServerOnceConnected = false, int webServerPort = 80, uint8_t wifiLEDPin = LED_BUILTIN, bool wifiLEDOn = LED_BUILTIN_ON);
     boolean begin(char const *apName, char const *apPassword = NULL, bool autoconnect = true);
     void end();
     void connect();
@@ -170,7 +184,6 @@ class YoYoWiFiManager : public AsyncWebHandler {
     yy_status_t getStatus();
     uint32_t getChipId();
 
-    void blinkWiFiLED(int count);
     bool findNetwork(char const *ssid, char *matchingSSID, bool autocomplete = false, bool autocorrect = false, int autocorrectError = 0);
 
     //AsyncWebHandler:
