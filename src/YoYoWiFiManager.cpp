@@ -255,8 +255,6 @@ uint8_t YoYoWiFiManager::loop() {
       currentStatus = yyStatus;
     }
 
-    setMode(updateTimeOuts(), true);
-
     //Everytime for each mode:
     switch(currentMode) {
       case YY_MODE_NONE:
@@ -274,6 +272,8 @@ uint8_t YoYoWiFiManager::loop() {
         processBroadcastMessageList();
         break;
     }
+
+    setMode(updateTimeOuts());
   }
 
   return(currentStatus);
@@ -284,6 +284,13 @@ bool YoYoWiFiManager::peerNetworkSet() {
 }
 
 void YoYoWiFiManager::setMode(yy_mode_t mode, bool update) {
+  if(mode != currentMode) {
+    char *modeString = new char[32];
+    getModeAsString(mode, modeString);
+    Serial.printf("setMode: %s\n", modeString);
+    delete modeString;
+  }
+
   nextMode = mode;
   if(update) updateMode();
 }
@@ -460,24 +467,27 @@ void YoYoWiFiManager::updateServerTimeOut() {
 }
 
 YoYoWiFiManager::yy_mode_t YoYoWiFiManager::updateTimeOuts() {
-  yy_mode_t mode = currentMode;
+  yy_mode_t mode = nextMode;
 
-  switch(currentStatus) {
-    case YY_CONNECTED:
-      updateClientTimeOut();
-    break;
-    case YY_CONNECTED_PEER_CLIENT:
-      updateClientTimeOut();
-    break;
-    case YY_CONNECTED_PEER_SERVER:
-      if(hasClients()) updateServerTimeOut();
-    break;
-    default:
-      if(currentMode != YY_MODE_PEER_SERVER && peerNetworkSet() && clientHasTimedOut())
-        mode = YY_MODE_PEER_SERVER;
+  //if we aren't waiting for a mode change:
+  if(currentMode == nextMode) {
+    switch(currentStatus) {
+      case YY_CONNECTED:
+        updateClientTimeOut();
+      break;
+      case YY_CONNECTED_PEER_CLIENT:
+        updateClientTimeOut();
+      break;
+      case YY_CONNECTED_PEER_SERVER:
+        if(hasClients()) updateServerTimeOut();
+      break;
+      default:
+        if(currentMode != YY_MODE_PEER_SERVER && peerNetworkSet() && clientHasTimedOut())
+          mode = YY_MODE_PEER_SERVER;
 
-      if(currentMode != YY_MODE_CLIENT && serverHasTimedOut() && settings && settings -> hasNetworkCredentials())
-        mode = YY_MODE_CLIENT;
+        if(currentMode != YY_MODE_CLIENT && serverHasTimedOut() && settings && settings -> hasNetworkCredentials())
+          mode = YY_MODE_CLIENT;
+    }
   }
 
   return(mode);
@@ -728,6 +738,8 @@ void YoYoWiFiManager::processBroadcastMessageList() {
   if(!broadcastMessageList.isNull() && broadcastMessageList.size() > 0) {
     broadcastMessage(broadcastMessageList[0]);
     broadcastMessageList.remove(0);
+
+    Serial.printf("processBroadcastMessageList - now: %i\n", broadcastMessageList.size());
   }
 }
 
