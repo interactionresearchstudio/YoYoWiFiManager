@@ -296,6 +296,11 @@ bool YoYoWiFiManager::updateMode() {
     return(false);
   }
 
+  if(!broadcastMessageList.isNull() && broadcastMessageList.size() > 0) {
+    //broadcast messages waiting to be sent
+    return(false);
+  }
+
   if(nextMode != currentMode) {
     delay(300);  //Allow any final transactions to complete before mode changes
 
@@ -748,7 +753,8 @@ bool YoYoWiFiManager::broadcastMessage(JsonVariant message) {
       IPAddress *ipAddress = new IPAddress();
       for (int i = 0; i < peerCount; i++) {
         getPeerN(i, ipAddress, NULL);
-        POST(ipAddress -> toString().c_str(), message["path"], message["payload"]);
+        if(message["method"] == "POST") POST(ipAddress -> toString().c_str(), message["path"], message["payload"]);
+        //TODO: consider the other method types
       }
       delete ipAddress;
     }
