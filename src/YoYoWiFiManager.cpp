@@ -3,7 +3,7 @@
 YoYoWiFiManager::YoYoWiFiManager() {
 }
 
-void YoYoWiFiManager::init(YoYoNetworkSettingsInterface *settings, voidCallbackPtr onYY_CONNECTEDhandler, jsonCallbackPtr getHandler, jsonCallbackPtr postHandler, bool startWebServerOnceConnected, int webServerPort, uint8_t wifiLEDPin) {
+void YoYoWiFiManager::init(YoYoNetworkSettingsInterface *settings, voidCallbackPtr onYY_CONNECTEDhandler, jsonCallbackPtr getHandler, jsonCallbackPtr postHandler, bool startWebServerOnceConnected, int webServerPort, uint8_t wifiLEDPin, bool wifiLEDOn) {
   this -> settings = settings;
   this -> onYY_CONNECTEDhandler = onYY_CONNECTEDhandler;
   this -> yoYoCommandGetHandler = getHandler;
@@ -13,6 +13,7 @@ void YoYoWiFiManager::init(YoYoNetworkSettingsInterface *settings, voidCallbackP
   this -> webServerPort = webServerPort;
 
   this -> wifiLEDPin = wifiLEDPin;
+  this -> wifiLEDOn = wifiLEDOn;
   pinMode(wifiLEDPin, OUTPUT);
 
   WiFi.persistent(false); //YoYoWiFiManager manages the persistence of networks itself
@@ -228,7 +229,6 @@ uint8_t YoYoWiFiManager::loop() {
             setMode(YY_MODE_PEER_CLIENT, true);
           }
           else {
-            blinkWiFiLED(3);
             Serial.printf("Connected to: %s\n", WiFi.SSID().c_str());
             Serial.println(WiFi.localIP());
 
@@ -260,16 +260,16 @@ uint8_t YoYoWiFiManager::loop() {
     //Everytime for each mode:
     switch(currentMode) {
       case YY_MODE_NONE:
-        digitalWrite(wifiLEDPin, LOW);
+        digitalWrite(wifiLEDPin, !wifiLEDOn);
         break;
       case YY_MODE_CLIENT:
-        digitalWrite(wifiLEDPin, LOW);
+        digitalWrite(wifiLEDPin, !wifiLEDOn);
         break;
       case YY_MODE_PEER_CLIENT:
-        digitalWrite(wifiLEDPin, HIGH);
+        digitalWrite(wifiLEDPin, wifiLEDOn);
         break;
       case YY_MODE_PEER_SERVER:
-        digitalWrite(wifiLEDPin, HIGH);
+        digitalWrite(wifiLEDPin, wifiLEDOn);
         dnsServer.processNextRequest();
         processBroadcastMessageList();
         break;
@@ -481,17 +481,6 @@ YoYoWiFiManager::yy_mode_t YoYoWiFiManager::updateTimeOuts() {
   }
 
   return(mode);
-}
-
-
-void YoYoWiFiManager::blinkWiFiLED(int count) {
-  for (byte i = 0; i < count; i++) {
-    digitalWrite(wifiLEDPin, 1);
-    delay(100);
-    digitalWrite(wifiLEDPin, 0);
-    delay(400);
-  }
-  delay(600);
 }
 
 //AsyncWebHandler
