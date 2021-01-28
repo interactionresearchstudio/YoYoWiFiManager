@@ -300,11 +300,13 @@ bool YoYoWiFiManager::updateMode() {
 
   if(activeRequests > 0) {
     //waiting for activeRequests to complete
+    Serial.printf("waiting for activeRequests to complete\n");
     return(false);
   }
 
   if(!broadcastMessageList.isNull() && broadcastMessageList.size() > 0) {
     //broadcast messages waiting to be sent
+    Serial.printf("broadcast messages waiting to be sent\n");
     return(false);
   }
 
@@ -725,21 +727,21 @@ void YoYoWiFiManager::onYoYoMessagePOST(JsonVariant message, AsyncWebServerReque
   }
   //when the response is sent, the client is closed and freed from the memory
 
-  if(success && message["broadcast"] == true) {
+  if(success && currentMode == YY_MODE_PEER_SERVER && message["broadcast"] == true) {
     addBroadcastMessage(message);
   }
 }
 
 void YoYoWiFiManager::addBroadcastMessage(JsonVariant message) {
-  broadcastMessageList.add(message);
+  if(currentMode == YY_MODE_PEER_SERVER) {
+    broadcastMessageList.add(message);
+  }
 }
 
 void YoYoWiFiManager::processBroadcastMessageList() {
   if(!broadcastMessageList.isNull() && broadcastMessageList.size() > 0) {
     broadcastMessage(broadcastMessageList[0]);
     broadcastMessageList.remove(0);
-
-    Serial.printf("processBroadcastMessageList - now: %i\n", broadcastMessageList.size());
   }
 }
 
