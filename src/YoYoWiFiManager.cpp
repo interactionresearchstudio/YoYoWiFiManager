@@ -247,7 +247,6 @@ uint8_t YoYoWiFiManager::loop() {
         case YY_CONNECTED_PEER_SERVER:
         break;
         case YY_CONNECTION_LOST:
-          setMode(YY_MODE_CLIENT, true);
         break;
         case YY_DISCONNECTED:
         break;
@@ -355,13 +354,11 @@ bool YoYoWiFiManager::updateMode() {
         Serial.println("about to start server...");
         if(startWebServerOnceConnected) startWebServer();
         else stopWebServer();
-        delay(random(MAX_SYNC_DELAY));  //stop peers that are attempting to find a network from becoming synchronised
         updateClientTimeOut();
         break;
       case YY_MODE_PEER_CLIENT: 
         WiFi.mode(WIFI_STA);
         startWebServer();
-        delay(random(MAX_SYNC_DELAY));
         updateClientTimeOut();
         break;
       case YY_MODE_PEER_SERVER:
@@ -374,7 +371,7 @@ bool YoYoWiFiManager::updateMode() {
     }
     currentMode = nextMode;
 
-    printWiFiDiag();
+    //printWiFiDiag();
     result = true;
   }
 
@@ -457,7 +454,10 @@ bool YoYoWiFiManager::clientHasTimedOut() {
 }
 
 void YoYoWiFiManager::updateClientTimeOut() {
-  clientTimeOutAtMs = millis() + WIFICLIENTTIMEOUT;
+  if(clientTimeOutAtMs == 0 || clientHasTimedOut()) {
+    int timeoutMs = MIN_WIFICLIENTTIMEOUT + random(MIN_WIFICLIENTTIMEOUT);
+    clientTimeOutAtMs = millis() + timeoutMs;
+  }
 }
 
 bool YoYoWiFiManager::serverHasTimedOut() {
@@ -465,7 +465,10 @@ bool YoYoWiFiManager::serverHasTimedOut() {
 }
 
 void YoYoWiFiManager::updateServerTimeOut() {
-  serverTimeOutAtMs = millis() + WIFISERVERTIMEOUT;
+  if(serverTimeOutAtMs == 0 || serverHasTimedOut()) {
+    int timeoutMs = MIN_WIFISERVERTIMEOUT + random(MIN_WIFISERVERTIMEOUT);
+    serverTimeOutAtMs = millis() + timeoutMs;
+  }
 }
 
 YoYoWiFiManager::yy_mode_t YoYoWiFiManager::updateTimeOuts() {
@@ -727,8 +730,10 @@ void YoYoWiFiManager::onYoYoMessagePOST(JsonVariant message, AsyncWebServerReque
   }
   //when the response is sent, the client is closed and freed from the memory
 
-  if(success && currentMode == YY_MODE_PEER_SERVER && message["broadcast"] == true) {
-    addBroadcastMessage(message);
+  if(success) {
+    if(currentMode == YY_MODE_PEER_SERVER && message["broadcast"] == true) {
+      addBroadcastMessage(message);
+    }
   }
 }
 
