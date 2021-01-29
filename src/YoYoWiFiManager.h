@@ -46,7 +46,7 @@
 #define MIN_WIFISERVERTIMEOUT 60000
 #define SCAN_NETWORKS_MIN_INT 30000
 #define MIN_CLIENTLISTUPDATEINTERVAL 3000
-#define MIN_STATUSUPDATEINTERVAL 500
+#define MIN_MULTIUPDATEINTERVAL 500
 
 typedef enum {
   //compatibility with wl_status_t (wl_definitions.h)
@@ -89,7 +89,7 @@ class YoYoWiFiManager : public AsyncWebHandler {
     bool peerNetworkSet();
     
     yy_status_t currentStatus = YY_IDLE_STATUS;
-    uint32_t lastUpdatedStatusAtMs = 0;
+    uint32_t lastUpdatedMultiAtMs = 0;
 
     const byte DNS_PORT = 53;
     DNSServer dnsServer;
