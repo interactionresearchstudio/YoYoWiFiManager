@@ -185,22 +185,23 @@ bool YoYoWiFiManager::findNetwork(char const *ssid, char *matchingSSID, bool aut
 yy_status_t YoYoWiFiManager::getStatus() {
   yy_status_t yyStatus = currentStatus;
 
-  if(millis() > (lastUpdatedStatusAtMs + MIN_STATUSUPDATEINTERVAL)) {
-    uint8_t wlStatus = (currentMode == YY_MODE_PEER_SERVER) ?  WiFi.status() : wifiMulti.run();
-    
-    if(wlStatus == WL_CONNECTED) {
-      switch(currentMode) {
-        case YY_MODE_CLIENT:      yyStatus = YY_CONNECTED; break;
-        case YY_MODE_PEER_CLIENT: yyStatus = YY_CONNECTED_PEER_CLIENT; break;
-      }
+  uint8_t wlStatus = WiFi.status();
+  if(currentMode != YY_MODE_PEER_SERVER && millis() > (lastUpdatedMultiAtMs + MIN_MULTIUPDATEINTERVAL)) {
+    wlStatus = wifiMulti.run();
+    lastUpdatedMultiAtMs = millis();
+  }
+
+  if(wlStatus == WL_CONNECTED) {
+    switch(currentMode) {
+      case YY_MODE_CLIENT:      yyStatus = YY_CONNECTED; break;
+      case YY_MODE_PEER_CLIENT: yyStatus = YY_CONNECTED_PEER_CLIENT; break;
     }
-    else if(currentMode == YY_MODE_PEER_SERVER && hasClients()) {
-      yyStatus = YY_CONNECTED_PEER_SERVER;
-    }
-    else {
-      yyStatus = (yy_status_t) wlStatus;  //Otherwise yy_status_t and wl_status_t are value compatible
-    }
-    lastUpdatedStatusAtMs = millis();
+  }
+  else if(currentMode == YY_MODE_PEER_SERVER && hasClients()) {
+    yyStatus = YY_CONNECTED_PEER_SERVER;
+  }
+  else {
+    yyStatus = (yy_status_t) wlStatus;  //Otherwise yy_status_t and wl_status_t are value compatible
   }
 
   return(yyStatus);
@@ -223,8 +224,8 @@ uint8_t YoYoWiFiManager::loop() {
       delete currentStatusString, yyStatusString;
 
       switch(yyStatus) {
-        //implicitly in YY_MODE_CLIENT
         case YY_CONNECTED:
+          //implicitly in YY_MODE_CLIENT
           if(WiFi.SSID().equals(peerNetworkSSID)) {
             setMode(YY_MODE_PEER_CLIENT, true);
           }
@@ -283,13 +284,6 @@ bool YoYoWiFiManager::peerNetworkSet() {
 }
 
 void YoYoWiFiManager::setMode(yy_mode_t mode, bool update) {
-  if(mode != currentMode) {
-    char *modeString = new char[32];
-    getModeAsString(mode, modeString);
-    Serial.printf("setMode: %s\n", modeString);
-    delete modeString;
-  }
-
   nextMode = mode;
   if(update) updateMode();
 }
