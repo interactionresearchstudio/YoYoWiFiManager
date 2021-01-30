@@ -167,13 +167,15 @@ class YoYoWiFiManager : public AsyncWebHandler {
     void setMode(yy_mode_t mode, bool update = false);
     bool updateMode();
 
+    void updateWifiLED();
+
     void printWiFiDiag();
     void getModeAsString(yy_mode_t mode, char *string);
     void getStatusAsString(yy_status_t status, char *string);
   public:
     YoYoWiFiManager();
 
-    void init(YoYoNetworkSettingsInterface *settings = NULL, voidCallbackPtr onYY_CONNECTEDhandler = NULL, jsonCallbackPtr getHandler = NULL, jsonCallbackPtr postHandler = NULL, bool startWebServerOnceConnected = false, int webServerPort = 80, uint8_t wifiLEDPin = LED_BUILTIN, bool wifiLEDOn = LED_BUILTIN_ON);
+    void init(YoYoNetworkSettingsInterface *settings = NULL, voidCallbackPtr onYY_CONNECTEDhandler = NULL, jsonCallbackPtr getHandler = NULL, jsonCallbackPtr postHandler = NULL, bool startWebServerOnceConnected = false, int webServerPort = 80, int wifiLEDPin = LED_BUILTIN, bool wifiLEDOn = LED_BUILTIN_ON);
     boolean begin(char const *apName, char const *apPassword = NULL, bool autoconnect = true);
     void end();
     void connect();
@@ -203,6 +205,8 @@ class YoYoWiFiManager : public AsyncWebHandler {
 
     int POST(const char *server, const char *path, JsonVariant payload, char *response = NULL);
     int GET(const char *server, const char *path, JsonDocument &response);
+
+    void setWifiLED(bool value);
 
   private:
     bool mac_addr_to_c_str(uint8_t *mac, char *str);

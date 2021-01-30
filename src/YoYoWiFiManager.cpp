@@ -3,7 +3,7 @@
 YoYoWiFiManager::YoYoWiFiManager() {
 }
 
-void YoYoWiFiManager::init(YoYoNetworkSettingsInterface *settings, voidCallbackPtr onYY_CONNECTEDhandler, jsonCallbackPtr getHandler, jsonCallbackPtr postHandler, bool startWebServerOnceConnected, int webServerPort, uint8_t wifiLEDPin, bool wifiLEDOn) {
+void YoYoWiFiManager::init(YoYoNetworkSettingsInterface *settings, voidCallbackPtr onYY_CONNECTEDhandler, jsonCallbackPtr getHandler, jsonCallbackPtr postHandler, bool startWebServerOnceConnected, int webServerPort, int wifiLEDPin, bool wifiLEDOn) {
   this -> settings = settings;
   this -> onYY_CONNECTEDhandler = onYY_CONNECTEDhandler;
   this -> yoYoCommandGetHandler = getHandler;
@@ -14,7 +14,7 @@ void YoYoWiFiManager::init(YoYoNetworkSettingsInterface *settings, voidCallbackP
 
   this -> wifiLEDPin = wifiLEDPin;
   this -> wifiLEDOn = wifiLEDOn;
-  pinMode(wifiLEDPin, OUTPUT);
+  if(this -> wifiLEDOn >= 0) pinMode(wifiLEDPin, OUTPUT);
 
   WiFi.persistent(false); //YoYoWiFiManager manages the persistence of networks itself
 
@@ -258,16 +258,12 @@ uint8_t YoYoWiFiManager::loop() {
     //Everytime for each mode:
     switch(currentMode) {
       case YY_MODE_NONE:
-        digitalWrite(wifiLEDPin, !wifiLEDOn);
         break;
       case YY_MODE_CLIENT:
-        digitalWrite(wifiLEDPin, !wifiLEDOn);
         break;
       case YY_MODE_PEER_CLIENT:
-        digitalWrite(wifiLEDPin, wifiLEDOn);
         break;
       case YY_MODE_PEER_SERVER:
-        digitalWrite(wifiLEDPin, wifiLEDOn);
         dnsServer.processNextRequest();
         processBroadcastMessageList();
         break;
@@ -275,8 +271,40 @@ uint8_t YoYoWiFiManager::loop() {
 
     setMode(updateTimeOuts());
   }
+  updateWifiLED();
 
   return(currentStatus);
+}
+
+void YoYoWiFiManager::updateWifiLED() {
+  if(wifiLEDOn >= 0) {
+    if(!running) {
+      digitalWrite(wifiLEDPin, !wifiLEDOn);
+    }
+    else {
+      bool blink = ((millis() / 1000) % 2) == 0;
+
+      switch(currentMode) {
+        case YY_MODE_NONE:
+          setWifiLED(LOW);
+          break;
+        case YY_MODE_CLIENT:
+          setWifiLED(LOW && blink);
+          break;
+        case YY_MODE_PEER_CLIENT:
+          setWifiLED((currentStatus == YY_CONNECTED_PEER_CLIENT) ? HIGH : blink);
+          break;
+        case YY_MODE_PEER_SERVER:
+          setWifiLED(HIGH);
+          break;
+      }
+    }
+  }
+}
+
+void YoYoWiFiManager::setWifiLED(bool value) {
+  value = !(wifiLEDOn ^ value);
+  digitalWrite(wifiLEDPin, value);
 }
 
 bool YoYoWiFiManager::peerNetworkSet() {
