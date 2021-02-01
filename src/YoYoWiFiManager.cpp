@@ -192,10 +192,10 @@ yy_status_t YoYoWiFiManager::getStatus() {
   }
 
   if(wlStatus == WL_CONNECTED) {
-    switch(currentMode) {
-      case YY_MODE_CLIENT:      yyStatus = YY_CONNECTED; break;
-      case YY_MODE_PEER_CLIENT: yyStatus = YY_CONNECTED_PEER_CLIENT; break;
+    if(WiFi.SSID().equals(peerNetworkSSID)) {
+      yyStatus = YY_CONNECTED_PEER_CLIENT;
     }
+    else yyStatus = YY_CONNECTED;
   }
   else if(currentMode == YY_MODE_PEER_SERVER && hasClients()) {
     yyStatus = YY_CONNECTED_PEER_SERVER;
