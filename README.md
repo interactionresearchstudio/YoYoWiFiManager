@@ -1,3 +1,5 @@
+![esp8266](https://github.com/interactionresearchstudio/YoYoWiFiManager/workflows/esp8266/badge.svg)
+![esp32](https://github.com/interactionresearchstudio/YoYoWiFiManager/workflows/esp32/badge.svg)
 # The Yo-Yo WiFi Manager Library
 The Yo-Yo WiFi Manager Library is an [Arduino](http://www.arduino.cc/download) Library that hosts rich web experiences using HTML and JavaScript on the [ESP8266](https://en.wikipedia.org/wiki/ESP8266) and [ESP32](https://en.wikipedia.org/wiki/ESP32) that simply integrate with external circuitry. Operating as a [captive portal](https://en.wikipedia.org/wiki/Captive_portal) hosted webpages can standalone without the dependency of the Internet. Alternatively, this can be used like the excellent [WiFiManager](https://github.com/tzapu/WiFiManager) library to manage WiFi connectivity for IoT devices. In addition, with the Yo-Yo WiFi Manager Library peer-to-peer networks of devices can be simply configured and operate in concert through one webpage.
 
