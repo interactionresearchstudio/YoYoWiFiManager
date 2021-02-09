@@ -467,6 +467,8 @@ void YoYoWiFiManager::getStatusAsString(yy_status_t status, char *string) {
       case YY_CONNECTED_PEER_SERVER:
         strcpy(string, "YY_CONNECTED_PEER_SERVER");
         break;
+      default:
+        break;
     }
   }
 }
