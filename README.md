@@ -58,7 +58,9 @@ void setup() {
     settings = new YoYoSettings(512);
     wifiManager.init(settings, onceConnected);
 
-    //Attempt to connect to the network, if we can not find a WiFi network previously saved in the settings start a captive portal called "YoYoMachines", with a password of "blinkblink" that will allow a new one to be configured - this call does not block:
+    //Attempt to connect to the network, 
+    //if we can not find a WiFi network previously saved in the settings start a captive portal called "YoYoMachines", 
+    //with a password of "blinkblink" that will allow a new one to be configured - this call does not block:
     wifiManager.begin("YoYoMachines", "blinkblink");
 }
 
