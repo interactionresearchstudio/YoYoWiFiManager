@@ -78,7 +78,7 @@ void loop() {
 }
 ```
 
-Once started, by default the built-in LED will flash every second until a network is found or if none is available (with a minimum timeout of 30 seconds) the LED will light constantly and create a captive portal page. The `data` folder contains this page, a basic HTML form to configure a local WiFi network using [bootstrap.js](https://getbootstrap.com/) and [jQuery](https://jquery.com/).
+Once started, by default the built-in LED will flash every second until a network is found or if none is available (with a minimum timeout of 30 seconds) the LED will light constantly and create a captive portal page. The `data` folder contains this page, a basic HTML form to configure a local WiFi network using [bootstrap.js](https://getbootstrap.com/) and [jQuery](https://jquery.com/). Once the network is configured the LED will stay off.
 
 ![Basic example](./images/basic.png)
 
