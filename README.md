@@ -78,11 +78,13 @@ void loop() {
 }
 ```
 
-Once started, by default the built-in LED will flash every second until a network is found or if none is available (with a minimum timeout of 30 seconds) the LED will light constantly and create a captive portal page. The `data` folder contains this page, a basic HTML form to configure a local WiFi network using [bootstrap.js](https://getbootstrap.com/) and [jQuery](https://jquery.com/). Once the network is configured the LED will stay off.
+Once started, by default the built-in LED will flash every second until a network is found or if none is available (with a minimum timeout of 30 seconds) the LED will light constantly and create a captive portal page. The `data` folder contains this page, a basic HTML form to configure a local WiFi network - with the credentials specified in wifiManager.begin(). Once the network is configured and connected the LED will blink quickly three times and then stay off.
 
 ![Basic example](./images/basic.png)
 
-wifiManager.begin() does not block. YY_CONNECTED is equal to WL_CONNECTED
+If multiple devices are started close to each other and share the same credentials they will automatically form a peer network; setting the network through the captive portal will then simply configure them all.
+
+wifiManager.begin() does not block. YY_CONNECTED is equivalent to and numerically equal to [WL_CONNECTED](https://www.arduino.cc/en/Reference/WiFiStatus).
 
 ### BasicWithEndpoints
 ### P5js
