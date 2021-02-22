@@ -278,10 +278,7 @@ uint8_t YoYoWiFiManager::loop() {
 
 void YoYoWiFiManager::updateWifiLED() {
   if(wifiLEDOn >= 0) {
-    if(!running) {
-      digitalWrite(wifiLEDPin, !wifiLEDOn);
-    }
-    else {
+    if(running) {
       bool blink = ((millis() / 1000) % 2) == 0;
 
       switch(currentMode) {
@@ -437,10 +434,13 @@ void YoYoWiFiManager::getModeAsString(yy_mode_t mode, char *string) {
   }
 }
 
-void YoYoWiFiManager::getStatusAsString(yy_status_t status, char *string) {
+char * YoYoWiFiManager::getStatusAsString(char *string) {
+  return(getStatusAsString(currentStatus, string));
+}
+
+char * YoYoWiFiManager::getStatusAsString(yy_status_t status, char *string) {
   if(string != NULL) {
     switch(status) {
-      case YY_CONNECTED:
         strcpy(string, "YY_CONNECTED");
         break;
       case YY_IDLE_STATUS:
@@ -471,6 +471,7 @@ void YoYoWiFiManager::getStatusAsString(yy_status_t status, char *string) {
         break;
     }
   }
+  return(string);
 }
 
 bool YoYoWiFiManager::clientHasTimedOut() {
