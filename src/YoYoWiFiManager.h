@@ -171,7 +171,6 @@ class YoYoWiFiManager : public AsyncWebHandler {
 
     void printWiFiDiag();
     void getModeAsString(yy_mode_t mode, char *string);
-    void getStatusAsString(yy_status_t status, char *string);
   public:
     YoYoWiFiManager();
 
@@ -207,6 +206,9 @@ class YoYoWiFiManager : public AsyncWebHandler {
     int GET(const char *server, const char *path, JsonDocument &response);
 
     void setWifiLED(bool value);
+
+    char *getStatusAsString(char *string);
+    char *getStatusAsString(yy_status_t status, char *string);
 
   private:
     bool mac_addr_to_c_str(uint8_t *mac, char *str);

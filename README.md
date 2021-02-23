@@ -1,7 +1,7 @@
 ![esp8266](https://github.com/interactionresearchstudio/YoYoWiFiManager/workflows/esp8266/badge.svg)
 ![esp32](https://github.com/interactionresearchstudio/YoYoWiFiManager/workflows/esp32/badge.svg)
 # The Yo-Yo WiFi Manager Library
-The Yo-Yo WiFi Manager Library is an [Arduino](http://www.arduino.cc/download) Library for [ESP8266](https://en.wikipedia.org/wiki/ESP8266) and [ESP32](https://en.wikipedia.org/wiki/ESP32) that manages WiFi credentials via a [captive portal](https://en.wikipedia.org/wiki/Captive_portal) configuration webpage; in this respect it is an alternative to the excellent [WiFiManager](https://github.com/tzapu/WiFiManager). However, the Yo-Yo WiFi Manager Library also supports the configuration of multiple devices simultaneously through one portal page, manages multiple sets of network credentials and offers full customisation of the portal HTML and JavaScript. 
+The Yo-Yo WiFi Manager Library is an [Arduino](http://www.arduino.cc/download) Library for [ESP8266](https://en.wikipedia.org/wiki/ESP8266) and [ESP32](https://en.wikipedia.org/wiki/ESP32) that manages WiFi credentials via a [captive portal](https://en.wikipedia.org/wiki/Captive_portal) configuration webpage; in this respect it is an alternative to the excellent [WiFiManager](https://github.com/tzapu/WiFiManager). However, the Yo-Yo WiFi Manager Library also supports the configuration of multiple devices simultaneously through one portal page, manages multiple sets of network credentials per device and offers full customisation of the portal HTML and JavaScript. 
 
 Beyond WiFi credential management, the Yo-Yo WiFi Manager Library provides a means to host rich web experiences that can integrate with electronics for Physical Computing applications. Hosted webpages using HTML and JavaScript can call custom RESTful endpoints that can easily be defined to talk directly to the ESP modules and any external circuitry. The webserver can serve any [SPIFFS](https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/storage/spiffs.html) file, be that media files (JPEG, PNG, MP3, etc) or any JavaScript libraries ([jQuery](https://jquery.com/), [bootstrap.js](https://getbootstrap.com/), [Vue.js](https://vuejs.org/), [p5.js](https://p5js.org/), etc) within the storage capacity of the device. Operating as a captive portal and managing its own WiFi network, there is no requirement for an Internet connection. Furthermore, the library will manage local peer networks of multiple devices operating together in this way.
 
@@ -78,11 +78,13 @@ void loop() {
 }
 ```
 
-Once started, by default the built-in LED will flash every second until a network is found or if none is available (with a minimum timeout of 30 seconds) the LED will light constantly and create a captive portal page. The `data` folder contains this page, a basic HTML form to configure a local WiFi network using [bootstrap.js](https://getbootstrap.com/) and [jQuery](https://jquery.com/).
+Once started, by default the built-in LED will flash every second until a network is found or if none is available (with a minimum timeout of 30 seconds) the LED will light constantly and create a captive portal page. The `data` folder contains this page, a basic HTML form to configure a local WiFi network - with the credentials specified in wifiManager.begin(). Once the network is configured and connected the LED will blink quickly three times and then stay off.
 
 ![Basic example](./images/basic.png)
 
-wifiManager.begin() does not block. YY_CONNECTED is equal to WL_CONNECTED
+If multiple devices are started close to each other and share the same credentials they will automatically form a peer network; setting the network through the captive portal will then simply configure them all.
+
+wifiManager.begin() does not block. YY_CONNECTED is equivalent to and numerically equal to [WL_CONNECTED](https://www.arduino.cc/en/Reference/WiFiStatus).
 
 ### BasicWithEndpoints
 ### P5js

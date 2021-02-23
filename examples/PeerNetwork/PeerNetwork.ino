@@ -1,3 +1,7 @@
+/*
+    Example documented here > https://github.com/interactionresearchstudio/YoYoWiFiManager#peernetwork
+*/
+
 #include <YoYoWiFiManager.h>
 YoYoWiFiManager wifiManager;
 
