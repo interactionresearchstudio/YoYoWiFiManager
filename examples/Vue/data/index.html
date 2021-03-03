@@ -11,17 +11,16 @@
     <link rel="stylesheet" href="vue-color-picker.min.css">
     <link href="style.css" rel="stylesheet" type="text/css">
 
-    <script src="vue.min.js"></script>
-    <script src="vue-color-picker.umd.min.js"></script>
-    <script src="axios.min.js"></script>
+    <script src="vue.min.js" onerror="location.reload()"></script>
+    <script src="vue-color-picker.umd.min.js" onerror="location.reload()"></script>
+    <script src="axios.min.js" onerror="location.reload()"></script>
+    <script src="script.js" onerror="location.reload()"></script>
 </head>
-<body>
+<body onload=init()>
     <div id="app">
-        <color-picker v-bind="colour" @input="onInput" @change="onChange" @select="onSelect"></color-picker>
+        <color-picker v-bind="color" @input="onInput" @change="onChange" @select="onSelect"></color-picker>
         <h1>{{ msg }}</h1>
-        <pre>{{ colour }}</pre>
+        <pre>{{ color }}</pre>
     </div>
-
-    <script src="script.js"></script>
 </body>
 </html>
