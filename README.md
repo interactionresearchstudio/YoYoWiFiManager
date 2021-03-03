@@ -78,7 +78,7 @@ void loop() {
 }
 ```
 
-Once started, by default the built-in LED will flash every second until a network is found or if none is available (with a minimum timeout of 30 seconds) the LED will light constantly and create a captive portal page. The `data` folder contains this page, a basic HTML form to configure a local WiFi network - with the credentials specified in wifiManager.begin(). Once the network is configured and connected the LED will blink quickly three times and then stay off.
+Once started, by default the built-in LED will flash every second until a network is found or if none is available (with a minimum timeout of 30 seconds) the LED will light constantly and create a captive portal page. The `data` folder contains this page, a basic HTML form to configure a local WiFi network - with the credentials specified in wifiManager.begin(). Once the network is configured and connected the LED will blink quickly three times and then stay off. If the connected network becomes unavailable, after a minimum timeout of 30 seconds the captive portal network will be restarted to allow reconfiguration. If no clients connect to the captive portal after at least 60 another attempt is made to connect to any known networks. And so on.
 
 ![Basic example](./images/basic.png)
 
