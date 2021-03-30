@@ -243,6 +243,7 @@ uint8_t YoYoWiFiManager::loop() {
         case YY_CONNECTED_PEER_CLIENT:
           Serial.printf("Connected to Peer Network: %s\n", WiFi.SSID().c_str());
           Serial.println(WiFi.localIP());
+          setMode(YY_MODE_PEER_CLIENT, true);
         break;
         //implicitly in YY_MODE_PEER_SERVER
         case YY_CONNECTED_PEER_SERVER:
