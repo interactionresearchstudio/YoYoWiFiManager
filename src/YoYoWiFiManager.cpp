@@ -14,7 +14,7 @@ void YoYoWiFiManager::init(YoYoNetworkSettingsInterface *settings, voidCallbackP
 
   this -> wifiLEDPin = wifiLEDPin;
   this -> wifiLEDOn = wifiLEDOn;
-  if(this -> wifiLEDOn >= 0) pinMode(wifiLEDPin, OUTPUT);
+  if(this -> wifiLEDPin >= 0) pinMode(wifiLEDPin, OUTPUT);
 
   WiFi.persistent(false); //YoYoWiFiManager manages the persistence of networks itself
 
@@ -301,8 +301,10 @@ void YoYoWiFiManager::updateWifiLED() {
 }
 
 void YoYoWiFiManager::setWifiLED(bool value) {
-  value = !(wifiLEDOn ^ value);
-  digitalWrite(wifiLEDPin, value);
+  if(this -> wifiLEDPin >= 0) {
+    value = !(wifiLEDOn ^ value);
+    digitalWrite(wifiLEDPin, value);
+  }
 }
 
 bool YoYoWiFiManager::peerNetworkSet() {
