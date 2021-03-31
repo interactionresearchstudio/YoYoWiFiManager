@@ -14,7 +14,7 @@ void YoYoWiFiManager::init(YoYoNetworkSettingsInterface *settings, voidCallbackP
 
   this -> wifiLEDPin = wifiLEDPin;
   this -> wifiLEDOn = wifiLEDOn;
-  if(this -> wifiLEDOn >= 0) pinMode(wifiLEDPin, OUTPUT);
+  if(this -> wifiLEDPin >= 0) pinMode(wifiLEDPin, OUTPUT);
 
   WiFi.persistent(false); //YoYoWiFiManager manages the persistence of networks itself
 
@@ -243,6 +243,7 @@ uint8_t YoYoWiFiManager::loop() {
         case YY_CONNECTED_PEER_CLIENT:
           Serial.printf("Connected to Peer Network: %s\n", WiFi.SSID().c_str());
           Serial.println(WiFi.localIP());
+          setMode(YY_MODE_PEER_CLIENT, true);
         break;
         //implicitly in YY_MODE_PEER_SERVER
         case YY_CONNECTED_PEER_SERVER:
@@ -300,8 +301,10 @@ void YoYoWiFiManager::updateWifiLED() {
 }
 
 void YoYoWiFiManager::setWifiLED(bool value) {
-  value = !(wifiLEDOn ^ value);
-  digitalWrite(wifiLEDPin, value);
+  if(this -> wifiLEDPin >= 0) {
+    value = !(wifiLEDOn ^ value);
+    digitalWrite(wifiLEDPin, value);
+  }
 }
 
 bool YoYoWiFiManager::peerNetworkSet() {
