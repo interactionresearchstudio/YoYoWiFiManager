@@ -128,6 +128,7 @@ function onSaveButtonClicked() {
   });
 }
 ```
+This example uses the built-in [endpoints](#endpoints) */yoyo/credentials* and */yoyo/networks*.
 
 Once started, by default the built-in LED will flash every second until a network is found or if none is available (with a minimum timeout of 30 seconds) the LED will light constantly and create a captive portal page. Once the network is configured and connected the LED will blink quickly three times and then stay off. If the connected network becomes unavailable, after a minimum timeout of 30 seconds the captive portal network will be restarted to allow reconfiguration. If no clients connect to the captive portal after at least 60 seconds another attempt is made to connect to any known networks. And so on.
 
