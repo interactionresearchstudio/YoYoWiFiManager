@@ -44,7 +44,11 @@ void loop() {
 }
 ```
 
+This few lines of code will start a new WiFi network called *YoYoMachines*, with the password *blinkblink*. When a client joins the network the captive portal will host the content from the data folder - where */index.html* is the root.
+
 ### Basic
+
+The Basic example sets up a captive portal to configure network credentials and establish Internet access. If multiple devices are started close to each other and share the same credentials they will automatically form a peer network; setting the network through the captive portal will then simply configure them all.
 
 ```
 #include <YoYoWiFiManager.h>
@@ -61,7 +65,7 @@ void setup() {
     //Attempt to connect to a WiFi network previously saved in the settings, 
     //if one can not be found start a captive portal called "YoYoMachines", 
     //with a password of "blinkblink" to configure a new one:
-    wifiManager.begin("YoYoMachines", "blinkblink");
+    wifiManager.begin("YoYoMachines", "blinkblink");  //does not block
 }
 
 void onceConnected() {
@@ -78,13 +82,55 @@ void loop() {
 }
 ```
 
-Once started, by default the built-in LED will flash every second until a network is found or if none is available (with a minimum timeout of 30 seconds) the LED will light constantly and create a captive portal page. The `data` folder contains this page, a basic HTML form to configure a local WiFi network - with the credentials specified in wifiManager.begin(). Once the network is configured and connected the LED will blink quickly three times and then stay off. If the connected network becomes unavailable, after a minimum timeout of 30 seconds the captive portal network will be restarted to allow reconfiguration. If no clients connect to the captive portal after at least 60 seconds another attempt is made to connect to any known networks. And so on.
-
 ![Basic example](./images/basic.png)
 
-If multiple devices are started close to each other and share the same credentials they will automatically form a peer network; setting the network through the captive portal will then simply configure them all.
+The `data` folder contains a basic HTML form and javascript to configure a local WiFi network. This process is orchestrated by *script.js* of which this is a simplified version:
 
-wifiManager.begin() does not block. YY_CONNECTED is equivalent to and numerically equal to [WL_CONNECTED](https://www.arduino.cc/en/Reference/WiFiStatus).
+```
+function init() {
+  //GET any previously saved credentials:
+  $.getJSON('/yoyo/credentials', function (json) {
+    configure(json);
+  });
+}
+
+function configure(json) {
+  //Configure the interface with any previously saved credentials:
+  console.log(json);
+
+  populateNetworksList();
+}
+
+function populateNetworksList() {
+  //GET a list of visible WiFi networks:
+  $.getJSON('/yoyo/networks', function (json) {
+    console.log(json);
+
+    //Refresh every 10 seconds:
+    setTimeout(function() {
+      populateNetworksList();
+    }, 10000);
+  });
+}
+
+function onSaveButtonClicked() {
+  //When the save button is clicked:
+  var data = {
+    ssid: $('#ssid').val(),
+    password: $('#password').val()
+  };
+
+  //POST the new credentials:
+  $.ajax({
+    type: "POST",
+    url: "/yoyo/credentials",
+    data: JSON.stringify(data),
+  });
+}
+```
+This example uses the built-in [endpoints](#endpoints) */yoyo/credentials* and */yoyo/networks*.
+
+Once started, by default the built-in LED will flash every second until a network is found or if none is available (with a minimum timeout of 30 seconds) the LED will light constantly and create a captive portal page. Once the network is configured and connected the LED will blink quickly three times and then stay off. If the connected network becomes unavailable, after a minimum timeout of 30 seconds the captive portal network will be restarted to allow reconfiguration. If no clients connect to the captive portal after at least 60 seconds another attempt is made to connect to any known networks. And so on.
 
 ### BasicWithEndpoints
 ### P5js
@@ -102,8 +148,10 @@ The following endpoints are built-in:
 
 /yoyo/peers GET
 
-## Development
+## Status
+YY_CONNECTED is equivalent to and numerically equal to [WL_CONNECTED](https://www.arduino.cc/en/Reference/WiFiStatus).
 
+## Development
 * Fix the TODOs in the existing codebase
 * The default HTML page should generate a page that allows basic wifi config
 * Network discovery - zero conf (bonjour) support - use of iBeacon on the ESP32?
