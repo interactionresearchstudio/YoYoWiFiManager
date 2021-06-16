@@ -100,18 +100,34 @@ class YoYoSettings : public DynamicJsonDocument, public YoYoNetworkSettingsInter
             return(index);
         }
 
-        void getSSID(int n, char *ssid) {
-            if(ssid) {
+        bool getSSID(int n, char *ssid) {
+            bool success = false;
+
+            if(n < (*this)["credentials"].size() && ssid) {
                 ssid[0] = '\0';
-                strcpy(ssid, (*this)["credentials"][n]["ssid"]);
+                const char *v = (*this)["credentials"][n]["ssid"];
+                if(v) {
+                    strcpy(ssid, v);
+                    success = true;
+                }
             }
+
+            return(success);
         }
 
-        void getPassword(int n, char *password) {
-            if(password) {
+        bool getPassword(int n, char *password) {
+            bool success = false;
+
+            if(n < (*this)["credentials"].size() && password) {
                 password[0] = '\0';
-                strcpy(password, (*this)["credentials"][n]["password"]);
+                const char *v = (*this)["credentials"][n]["password"];
+                if(v) {
+                    strcpy(password, v);
+                    success = true;
+                }
             }
+
+            return(success);
         }
 
         void setLastNetwork(const char *ssid, bool autosave) {
