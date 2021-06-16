@@ -149,7 +149,7 @@ The following endpoints are built-in:
 /yoyo/peers GET
 
 ## Status
-YY_CONNECTED is equivalent to and numerically equal to [WL_CONNECTED](https://www.arduino.cc/en/Reference/WiFiStatus).
+YY_CONNECTED is functionally equivalent to and numerically equal to [WL_CONNECTED](https://www.arduino.cc/en/Reference/WiFiStatus).
 
 ## Development
 * Fix the TODOs in the existing codebase
