@@ -40,8 +40,8 @@
     #define LED_BUILTIN_ON HIGH
 #endif
 
-
-#define SSID_MAX_LENGTH 31
+#define SSID_MAX_LENGTH 32
+#define PASSWORD_MAX_LENGTH 64
 #define MIN_WIFICLIENTTIMEOUT 30000
 #define MIN_WIFISERVERTIMEOUT 60000
 #define SCAN_NETWORKS_MIN_INT 30000
@@ -84,8 +84,8 @@ class YoYoWiFiManager : public AsyncWebHandler {
       WiFiMulti wifiMulti;
     #endif
 
-    char peerNetworkSSID[SSID_MAX_LENGTH + 1];
-    char peerNetworkPassword[64];
+    char peerNetworkSSID[SSID_MAX_LENGTH];
+    char peerNetworkPassword[PASSWORD_MAX_LENGTH];
     bool peerNetworkSet();
     
     yy_status_t currentStatus = YY_IDLE_STATUS;

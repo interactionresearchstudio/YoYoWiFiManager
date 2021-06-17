@@ -127,8 +127,8 @@ void YoYoWiFiManager::addPeerNetwork(char *ssid, char *password) {
 void YoYoWiFiManager::addKnownNetworks() {
   if(settings) {
     int numberOfNetworkCredentials = settings->getNumberOfNetworkCredentials();
-    char *ssid = new char[32];
-    char *password = new char[64];
+    char *ssid = new char[SSID_MAX_LENGTH];
+    char *password = new char[PASSWORD_MAX_LENGTH];
     for(int n = 0; n < numberOfNetworkCredentials; ++n) {
       settings -> getSSID(n, ssid);
       settings -> getPassword(n, password);
@@ -144,7 +144,7 @@ bool YoYoWiFiManager::addNetwork(char const *ssid, char const *password, bool sa
   bool success = false;
 
   if(ssid && password) {
-    if(strlen(ssid) > 0 && strlen(ssid) <= SSID_MAX_LENGTH) {
+    if(strlen(ssid) > 0 && strlen(ssid) < SSID_MAX_LENGTH) {
       char *matchingSSID = new char[SSID_MAX_LENGTH];
 
       if(findNetwork(ssid, matchingSSID, false, true, 2)) {
@@ -153,7 +153,7 @@ bool YoYoWiFiManager::addNetwork(char const *ssid, char const *password, bool sa
 
       if(wifiMulti.addAP(ssid, password)) {
         if(save && settings) {
-          success = settings -> addNetwork(ssid, password);
+          success = settings -> addNetwork(ssid, password, true);
         }
         else success = true;
       }
@@ -321,13 +321,11 @@ bool YoYoWiFiManager::updateMode() {
 
   if(activeRequests > 0) {
     //waiting for activeRequests to complete
-    Serial.printf("waiting for activeRequests to complete\n");
     return(false);
   }
 
   if(!broadcastMessageList.isNull() && broadcastMessageList.size() > 0) {
     //broadcast messages waiting to be sent
-    Serial.printf("broadcast messages waiting to be sent\n");
     return(false);
   }
 
@@ -939,8 +937,8 @@ void YoYoWiFiManager::getCredentialsAsJson(JsonDocument& jsonDoc) {
  
   if(settings) {
     //Get all the credentials and turn them into json - but not passwords
-    char *ssid = new char[32];
-    char *password = new char[64];
+    char *ssid = new char[SSID_MAX_LENGTH];
+    char *password = new char[PASSWORD_MAX_LENGTH];
 
     int credentialsCount = settings -> getNumberOfNetworkCredentials();
     int lastNetwork = settings -> getLastNetwork();
@@ -979,8 +977,8 @@ bool YoYoWiFiManager::setCredentials(JsonVariant json) {
   bool success = false;
 
   if(settings) {
-    char *ssid = new char[32];
-    char *password = new char[64];
+    char *ssid = new char[SSID_MAX_LENGTH];
+    char *password = new char[PASSWORD_MAX_LENGTH];
 
     strcpy(ssid, json["ssid"]);
     strcpy(password, json["password"]);
@@ -1267,7 +1265,7 @@ void YoYoWiFiManager::getNetworksAsJson(JsonDocument& jsonDoc) {
 
   for (int i = 0; i < n; ++i) {
     String networkSSID = WiFi.SSID(i);
-    if (networkSSID.length() <= SSID_MAX_LENGTH) {
+    if (networkSSID.length() < SSID_MAX_LENGTH) {
       JsonObject network  = networks.createNestedObject();
       network["SSID"] = WiFi.SSID(i);
       network["BSSID"] = WiFi.BSSIDstr(i);
