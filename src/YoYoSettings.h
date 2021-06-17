@@ -37,7 +37,7 @@ class YoYoSettings : public DynamicJsonDocument, public YoYoNetworkSettingsInter
             return(result);
         }
 
-        bool addNetwork(const char *ssid, const char *password, bool autosave = true) {
+        bool addNetwork(const char *ssid, const char *password, bool force = false, bool autosave = true) {
             bool success = false;
             
             Serial.printf("Settings::addNetwork %s  %s\n", ssid, password);
@@ -45,19 +45,45 @@ class YoYoSettings : public DynamicJsonDocument, public YoYoNetworkSettingsInter
             int index = getNetwork(ssid);
             if(index >= 0) {
                 //Rewrite the password of an existing network - NB password must be (char *) not (const char *) otherwise only the pointer is copied:
-                (*this)["credentials"][index]["password"] = (char *) password;
-                success = true;
+                success =  setNetwork((*this)["credentials"][index], NULL, password);
             }
             else {
                 //Add a new network:
-                JsonVariant network = (*this)["credentials"].createNestedObject();
-                if(!network.isNull() && ssid && password){
-                    //NB ssid and password must be (char *) not (const char *) otherwise only the pointer is copied
-                    network["ssid"] = (char *) ssid;
-                    network["password"] = (char *) password;
+                if(ssid && password) {
+                    while(force && isFull()) removeNetwork(0, false);   //if storage is full - remove the oldest network - TODO: should it delete this network if lastnetwork is set true?
 
-                    success = true;
+                    success =  setNetwork((*this)["credentials"].createNestedObject(), ssid, password);
                 }
+            }
+
+            if(autosave && success) save();
+
+            return(success);
+        }
+
+        bool setNetwork(JsonVariant network, const char *ssid, const char *password) {
+            bool success = false;
+
+            if(!network.isNull()) {
+                //NB ssid and password must be (char *) not (const char *) otherwise only the pointer is copied
+                if(ssid) network["ssid"] = (char *) ssid;
+                if(password) network["password"] = (char *) password;
+
+                success = true;
+            }
+
+            return(success);
+        }
+
+        bool removeNetwork(int index, bool autosave = true) {
+            bool success = false;
+
+            JsonArray credentials = (*this)["credentials"];
+            if(index >= 0 && index < credentials.size()) {
+                credentials.remove(index);
+                garbageCollect();
+
+                success = true;
             }
 
             if(autosave && success) save();
@@ -66,15 +92,7 @@ class YoYoSettings : public DynamicJsonDocument, public YoYoNetworkSettingsInter
         }
 
         bool removeNetwork(const char *ssid, bool autosave = true) {
-            bool success = false;
-            
-            JsonVariant credentials = (*this)["credentials"];
-            for (JsonObject::iterator it = credentials.as<JsonObject>().begin(); it != credentials.as<JsonObject>().end(); ++it) {
-                if (it->value()["ssid"] == ssid) {
-                    credentials.as<JsonObject>().remove(it);
-                    success = true;
-                }
-            }
+            bool success = removeNetwork(getNetwork(ssid), autosave);
 
             if(autosave && success) save();
 
@@ -83,6 +101,7 @@ class YoYoSettings : public DynamicJsonDocument, public YoYoNetworkSettingsInter
 
         void clearNetworks(bool autosave = true) {
             (*this)["credentials"].clear();
+            garbageCollect();
 
             if(autosave) save();
         }
@@ -100,12 +119,12 @@ class YoYoSettings : public DynamicJsonDocument, public YoYoNetworkSettingsInter
             return(index);
         }
 
-        bool getSSID(int n, char *ssid) {
+        bool getSSID(int index, char *ssid) {
             bool success = false;
 
-            if(n < (*this)["credentials"].size() && ssid) {
+            if(index < (*this)["credentials"].size() && ssid) {
                 ssid[0] = '\0';
-                const char *v = (*this)["credentials"][n]["ssid"];
+                const char *v = (*this)["credentials"][index]["ssid"];
                 if(v) {
                     strcpy(ssid, v);
                     success = true;
@@ -115,12 +134,12 @@ class YoYoSettings : public DynamicJsonDocument, public YoYoNetworkSettingsInter
             return(success);
         }
 
-        bool getPassword(int n, char *password) {
+        bool getPassword(int index, char *password) {
             bool success = false;
 
-            if(n < (*this)["credentials"].size() && password) {
+            if(index < (*this)["credentials"].size() && password) {
                 password[0] = '\0';
-                const char *v = (*this)["credentials"][n]["password"];
+                const char *v = (*this)["credentials"][index]["password"];
                 if(v) {
                     strcpy(password, v);
                     success = true;
@@ -179,11 +198,10 @@ class YoYoSettings : public DynamicJsonDocument, public YoYoNetworkSettingsInter
         }
 
         bool isFull() {
-            bool result = false;
+            int freeBytes = capacity() - memoryUsage();
+            int networkBudgetBytes = (SSID_MAX_LENGTH + PASSWORD_MAX_LENGTH + 64);  //64 is the budget for the json notation
 
-            //TODO: implement - measure if there's enough space for a new network
-
-            return(result);
+            return(networkBudgetBytes > freeBytes);
         }
 };
 
