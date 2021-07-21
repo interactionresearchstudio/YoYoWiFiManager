@@ -441,7 +441,10 @@ char * YoYoWiFiManager::getStatusAsString(char *string) {
 
 char * YoYoWiFiManager::getStatusAsString(yy_status_t status, char *string) {
   if(string != NULL) {
+    string[0] = '\0';
+    
     switch(status) {
+      case YY_CONNECTED:
         strcpy(string, "YY_CONNECTED");
         break;
       case YY_IDLE_STATUS:
