@@ -147,9 +147,9 @@ bool YoYoWiFiManager::addNetwork(char const *ssid, char const *password, bool sa
     if(strlen(ssid) > 0 && strlen(ssid) < SSID_MAX_LENGTH) {
       char *matchingSSID = new char[SSID_MAX_LENGTH];
 
-      if(findNetwork(ssid, matchingSSID, false, true, 2)) {
-        ssid = matchingSSID;
-      }
+      // if(findNetwork(ssid, matchingSSID, false, true, 2)) {
+      //   ssid = matchingSSID;
+      // }
 
       if(wifiMulti.addAP(ssid, password)) {
         if(save && settings) {
