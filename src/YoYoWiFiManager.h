@@ -237,8 +237,6 @@ class YoYoWiFiManager : public AsyncWebHandler {
     void getClients(AsyncWebServerRequest *request);
     void getPeers(AsyncWebServerRequest *request);
     void getCredentials(AsyncWebServerRequest *request);
-    
-    bool setCredentials(JsonVariant message, AsyncWebServerRequest *request);
 };
 
 #endif
