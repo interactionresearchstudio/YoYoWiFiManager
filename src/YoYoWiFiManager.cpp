@@ -154,8 +154,12 @@ bool YoYoWiFiManager::addNetwork(char const *ssid, char const *password, bool sa
       if(wifiMulti.addAP(ssid, password)) {
         if(save && settings) {
           success = settings -> addNetwork(ssid, password, true);
+          if(!success) Serial.println("can't settings -> addNetwork()");
         }
         else success = true;
+      }
+      else {
+        Serial.println("can't wifiMulti.addAP()");
       }
       delete matchingSSID;
     }
@@ -712,7 +716,11 @@ void YoYoWiFiManager::onYoYoRequestPOST(uint8_t *data, size_t len, AsyncWebServe
       message["path"] = (char *) request->url().c_str();
       message["method"] = "POST";
 
-      onYoYoMessagePOST(message.as<JsonVariant>(), request);
+      onYoYoMessagePOST(message.as<JsonVariant>(), request); //does own request response
+    }
+    else {
+      Serial.printf("can't deserialize json\n%s\n\n", (const char*)json);
+      request->send(400);
     }
 
     delete json;
@@ -742,20 +750,27 @@ void YoYoWiFiManager::onYoYoMessagePOST(JsonVariant message, AsyncWebServerReque
 
   if (message["path"] == "/yoyo/broadcast") {
     //TODO: request to broadcast a message from a peer - 404 unless YY_MODE_PEER_SERVER
+    request->send(404);
   }
   else if (message["path"] == "/yoyo/credentials") {
-    if(setCredentials(message["payload"], request)) {
-      message["broadcast"] = true;
-      connect();  //this requests YY_MODE_CLIENT mode - which will be accessed on next loop() call
+    if(setCredentials(message["payload"])) {
+      request->send(200, "application/javascript", getCredentialsAsJsonString()); //TODO: is this the problem?
 
+      connect();  //this requests YY_MODE_CLIENT mode - which will be accessed on next loop() call
+      message["broadcast"] = true;
       success = true;
+    }
+    else {
+      Serial.println("can't set credentials from json");
+      request->send(400);
     }
   }
   else {
+    //Bespoke endpoint
     if(yoYoCommandPostHandler) {
       success = yoYoCommandPostHandler(message);
     }
-    request->send(success ? 200 : 404);
+    request->send(success ? 200 : 400);
   }
   //when the response is sent, the client is closed and freed from the memory
 
@@ -962,20 +977,6 @@ void YoYoWiFiManager::getCredentialsAsJson(JsonDocument& jsonDoc) {
   }
 }
 
-bool YoYoWiFiManager::setCredentials(JsonVariant json, AsyncWebServerRequest *request) {
-  serializeJson(json, Serial);
-
-  bool success = setCredentials(json);
-  if(success) {
-    request->send(200, "application/javascript", getCredentialsAsJsonString());
-  }
-  else {
-    request->send(400);
-  }
-
-  return(success);
-}
-
 bool YoYoWiFiManager::setCredentials(JsonVariant json) {
   bool success = false;
 
@@ -989,6 +990,9 @@ bool YoYoWiFiManager::setCredentials(JsonVariant json) {
     if(ssid && password) {
       Serial.printf("setCredentials %s  %s\n", ssid, password);
       success = addNetwork(ssid, password, true);
+    }
+    else {
+      Serial.println("can't extract ssid and network from json");
     }
 
     delete password;
