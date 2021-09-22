@@ -20,6 +20,9 @@
   #include <esp_wifi.h>
   #include <AsyncTCP.h>
   #include <SPIFFS.h>
+  #include <FS.h>
+  #include <SD.h>
+  #include <SPI.h>
 #endif
 #include <ESPAsyncWebServer.h>
 
@@ -62,6 +65,12 @@ typedef enum {
   YY_CONNECTED_PEER_CLIENT,
   YY_CONNECTED_PEER_SERVER
 } yy_status_t;
+
+typedef enum {
+  YY_SPIFFS_STORAGE,
+  YY_SD_STORAGE,
+  YY_NO_STORAGE
+} yy_storage_t;
 
 class YoYoWiFiManager : public AsyncWebHandler {
   public:
@@ -119,7 +128,7 @@ class YoYoWiFiManager : public AsyncWebHandler {
     uint8_t wifiLEDPin;
     bool wifiLEDOn;
 
-    bool SPIFFS_ENABLED = false;
+    yy_storage_t storageType = YY_NO_STORAGE;
 
     typedef void (*voidCallbackPtr)();
     voidCallbackPtr onYY_CONNECTEDhandler = NULL;
@@ -174,7 +183,7 @@ class YoYoWiFiManager : public AsyncWebHandler {
   public:
     YoYoWiFiManager();
 
-    void init(YoYoNetworkSettingsInterface *settings = NULL, voidCallbackPtr onYY_CONNECTEDhandler = NULL, jsonCallbackPtr getHandler = NULL, jsonCallbackPtr postHandler = NULL, bool startWebServerOnceConnected = false, int webServerPort = 80, int wifiLEDPin = LED_BUILTIN, bool wifiLEDOn = LED_BUILTIN_ON);
+    void init(YoYoNetworkSettingsInterface *settings = NULL, voidCallbackPtr onYY_CONNECTEDhandler = NULL, jsonCallbackPtr getHandler = NULL, jsonCallbackPtr postHandler = NULL, bool startWebServerOnceConnected = false, int webServerPort = 80, int wifiLEDPin = LED_BUILTIN, bool wifiLEDOn = LED_BUILTIN_ON, yy_storage_t storageType = YY_SPIFFS_STORAGE);
     boolean begin(char const *apName, char const *apPassword = NULL, bool autoconnect = true);
     void end();
     void connect();
@@ -216,6 +225,7 @@ class YoYoWiFiManager : public AsyncWebHandler {
     int getOUI(uint8_t *mac);
     int getOUI(uint8_t a, uint8_t b, uint8_t c, uint8_t d = 0, uint8_t e = 0, uint8_t f = 0);
 
+    bool fileExists(String path);
     void sendFile(AsyncWebServerRequest * request, String path);
     void sendIndexFile(AsyncWebServerRequest * request);
     String getMimeType(String filename);

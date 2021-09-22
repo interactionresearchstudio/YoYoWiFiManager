@@ -3,7 +3,7 @@
 YoYoWiFiManager::YoYoWiFiManager() {
 }
 
-void YoYoWiFiManager::init(YoYoNetworkSettingsInterface *settings, voidCallbackPtr onYY_CONNECTEDhandler, jsonCallbackPtr getHandler, jsonCallbackPtr postHandler, bool startWebServerOnceConnected, int webServerPort, int wifiLEDPin, bool wifiLEDOn) {
+void YoYoWiFiManager::init(YoYoNetworkSettingsInterface *settings, voidCallbackPtr onYY_CONNECTEDhandler, jsonCallbackPtr getHandler, jsonCallbackPtr postHandler, bool startWebServerOnceConnected, int webServerPort, int wifiLEDPin, bool wifiLEDOn, yy_storage_t storageType) {
   this -> settings = settings;
   this -> onYY_CONNECTEDhandler = onYY_CONNECTEDhandler;
   this -> yoYoCommandGetHandler = getHandler;
@@ -23,8 +23,16 @@ void YoYoWiFiManager::init(YoYoNetworkSettingsInterface *settings, voidCallbackP
   #endif
   memset(&adapter_sta_list, 0, sizeof(adapter_sta_list));
 
-  SPIFFS_ENABLED = SPIFFS.begin();
-
+  this -> storageType = YY_NO_STORAGE;
+  switch (storageType) {
+    case YY_SPIFFS_STORAGE:
+      if(SPIFFS.begin())  this -> storageType = YY_SPIFFS_STORAGE;
+      break;
+    case YY_SD_STORAGE:
+      if(SD.begin())      this -> storageType = YY_SD_STORAGE;
+      break;
+  }
+ 
   peerNetworkSSID[0] = NULL;
   peerNetworkPassword[0] = NULL;
 
@@ -549,7 +557,7 @@ void YoYoWiFiManager::handleRequest(AsyncWebServerRequest *request) {
     if(request->url().startsWith("/yoyo")) {
       onYoYoRequestGET(request);
     }
-    else if (SPIFFS_ENABLED && SPIFFS.exists(request->url())) {
+    else if (fileExists(request->url())) {
       sendFile(request, request->url());
     }
     else if (currentMode == YY_MODE_PEER_SERVER) {
@@ -623,11 +631,37 @@ void YoYoWiFiManager::handleBody(AsyncWebServerRequest * request, uint8_t *data,
   activeRequests--;
 }
 
+bool YoYoWiFiManager::fileExists(String path) {
+  bool result = false;
+
+  switch (storageType) {
+    case YY_SPIFFS_STORAGE:
+      result = SPIFFS.exists(path);
+      break;
+    case YY_SD_STORAGE:
+      result = SD.exists(path);
+      break;
+    case YY_NO_STORAGE:
+      break;
+  }
+
+  return(result);
+}
+
 void YoYoWiFiManager::sendFile(AsyncWebServerRequest * request, String path) {
   Serial.println("handleFileRead: " + path);
 
-  if (SPIFFS_ENABLED && SPIFFS.exists(path)) {
-    request->send(SPIFFS, path, getMimeType(path));
+  if (fileExists(path)) {
+    switch (storageType) {
+      case YY_SPIFFS_STORAGE:
+        request->send(SPIFFS, path, getMimeType(path));
+        break;
+      case YY_SD_STORAGE:
+        request->send(SD, path, getMimeType(path));
+        break;
+      case YY_NO_STORAGE:
+        break;
+    }
   }
   else {
     request->send(404);
@@ -639,7 +673,7 @@ void YoYoWiFiManager::setRootIndexFile(String rootIndexFile) {
 }
 
 void YoYoWiFiManager::sendIndexFile(AsyncWebServerRequest * request) {
-  if (SPIFFS_ENABLED && SPIFFS.exists(rootIndexFile)) {
+  if (fileExists(rootIndexFile)) {
     sendFile(request, rootIndexFile);
   }
   else {
