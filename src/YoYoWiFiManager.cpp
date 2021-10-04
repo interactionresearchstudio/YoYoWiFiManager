@@ -3,13 +3,13 @@
 YoYoWiFiManager::YoYoWiFiManager() {
 }
 
-void YoYoWiFiManager::init(YoYoNetworkSettingsInterface *settings, voidCallbackPtr onYY_CONNECTEDhandler, jsonCallbackPtr getHandler, jsonCallbackPtr postHandler, bool startWebServerOnceConnected, int webServerPort, int wifiLEDPin, bool wifiLEDOn, yy_storage_t storageType) {
+void YoYoWiFiManager::init(YoYoNetworkSettingsInterface *settings, voidCallbackPtr onYY_CONNECTEDhandler, jsonCallbackPtr getHandler, jsonCallbackPtr postHandler, bool stopWebServerOnceConnected, int webServerPort, int wifiLEDPin, bool wifiLEDOn, yy_storage_t storageType) {
   this -> settings = settings;
   this -> onYY_CONNECTEDhandler = onYY_CONNECTEDhandler;
   this -> yoYoCommandGetHandler = getHandler;
   this -> yoYoCommandPostHandler = postHandler;
 
-  this -> startWebServerOnceConnected = startWebServerOnceConnected;
+  this -> stopWebServerOnceConnected = stopWebServerOnceConnected;
   this -> webServerPort = webServerPort;
 
   this -> wifiLEDPin = wifiLEDPin;
@@ -384,8 +384,8 @@ bool YoYoWiFiManager::updateMode() {
       case YY_MODE_CLIENT:
         WiFi.mode(WIFI_STA);
         Serial.println("about to start server...");
-        if(startWebServerOnceConnected) startWebServer();
-        else stopWebServer();
+        if(stopWebServerOnceConnected) stopWebServer();
+        else startWebServer();
         updateClientTimeOut();
         break;
       case YY_MODE_PEER_CLIENT: 

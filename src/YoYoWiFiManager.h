@@ -107,7 +107,7 @@ class YoYoWiFiManager : public AsyncWebHandler {
 
     int webServerPort = 80;
     AsyncWebServer *webserver = NULL;
-    bool startWebServerOnceConnected = false;
+    bool stopWebServerOnceConnected = true;
     int activeRequests = 0;
 
     uint32_t clientTimeOutAtMs = 0;
@@ -184,7 +184,7 @@ class YoYoWiFiManager : public AsyncWebHandler {
   public:
     YoYoWiFiManager();
 
-    void init(YoYoNetworkSettingsInterface *settings = NULL, voidCallbackPtr onYY_CONNECTEDhandler = NULL, jsonCallbackPtr getHandler = NULL, jsonCallbackPtr postHandler = NULL, bool startWebServerOnceConnected = false, int webServerPort = 80, int wifiLEDPin = LED_BUILTIN, bool wifiLEDOn = LED_BUILTIN_ON, yy_storage_t storageType = YY_SPIFFS_STORAGE);
+    void init(YoYoNetworkSettingsInterface *settings = NULL, voidCallbackPtr onYY_CONNECTEDhandler = NULL, jsonCallbackPtr getHandler = NULL, jsonCallbackPtr postHandler = NULL, bool stopWebServerOnceConnected = true, int webServerPort = 80, int wifiLEDPin = LED_BUILTIN, bool wifiLEDOn = LED_BUILTIN_ON, yy_storage_t storageType = YY_SPIFFS_STORAGE);
     boolean begin(char const *apName, char const *apPassword = NULL, bool autoconnect = true);
     void end();
     void connect();
