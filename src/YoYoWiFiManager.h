@@ -10,7 +10,6 @@
   #include <ESP8266WiFiMulti.h>
   #include <ESPAsyncTCP.h>      //not currently available via Library Manager > https://github.com/me-no-dev/ESPAsyncTCP
   #include <ESP8266HTTPClient.h>
-  #include <FS.h>
   #include "YoYoWiFiManager/wifi_sta.h"
 
 #elif defined(ESP32)
@@ -20,10 +19,10 @@
   #include <esp_wifi.h>
   #include <AsyncTCP.h>
   #include <SPIFFS.h>
-  #include <FS.h>
-  #include <SD.h>
-  #include <SPI.h>
 #endif
+#include <SD.h>
+#include <SPI.h>
+#include <FS.h>
 #include <ESPAsyncWebServer.h>
 
 #include "YoYoWiFiManager/YoYoNetworkSettingsInterface.h"
@@ -36,12 +35,14 @@
       #define LED_BUILTIN  2
     #endif
     #define LED_BUILTIN_ON LOW
+    #define SD_CS    15
 #elif defined(ESP32)
     #ifndef LED_BUILTIN 
       #define LED_BUILTIN  2
     #endif
     #define LED_BUILTIN_ON HIGH
-#endif
+    #define SD_CS    5
+#endif    
 
 #define SSID_MAX_LENGTH 32
 #define PASSWORD_MAX_LENGTH 64

@@ -29,7 +29,7 @@ void YoYoWiFiManager::init(YoYoNetworkSettingsInterface *settings, voidCallbackP
       if(SPIFFS.begin())  this -> storageType = YY_SPIFFS_STORAGE;
       break;
     case YY_SD_STORAGE:
-      if(SD.begin())      this -> storageType = YY_SD_STORAGE;
+      if(SD.begin(SD_CS))      this -> storageType = YY_SD_STORAGE;
       break;
   }
  
@@ -657,7 +657,11 @@ void YoYoWiFiManager::sendFile(AsyncWebServerRequest * request, String path) {
         request->send(SPIFFS, path, getMimeType(path));
         break;
       case YY_SD_STORAGE:
-        request->send(SD, path, getMimeType(path));
+        #if defined(ESP32)
+          request->send(SD, path, getMimeType(path));
+        #elif defined(ESP8266)
+          //TODO: fix for ESP8266 SD object
+        #endif
         break;
       case YY_NO_STORAGE:
         break;
