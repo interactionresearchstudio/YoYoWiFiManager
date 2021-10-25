@@ -185,7 +185,7 @@ class YoYoWiFiManager : public AsyncWebHandler {
     YoYoWiFiManager();
 
     void init(YoYoNetworkSettingsInterface *settings = NULL, voidCallbackPtr onYY_CONNECTEDhandler = NULL, jsonCallbackPtr getHandler = NULL, jsonCallbackPtr postHandler = NULL, bool stopWebServerOnceConnected = true, int webServerPort = 80, int wifiLEDPin = LED_BUILTIN, bool wifiLEDOn = LED_BUILTIN_ON, yy_storage_t storageType = YY_SPIFFS_STORAGE);
-    boolean begin(char const *apName, char const *apPassword = NULL, bool autoconnect = true);
+    boolean begin(char const *apName, char const *apPassword = NULL, bool autoconnect = true, bool peerconnect = true);
     void end();
     void connect();
     void connect(char const *ssid, char const *password);

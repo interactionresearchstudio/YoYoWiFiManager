@@ -39,7 +39,7 @@ void YoYoWiFiManager::init(YoYoNetworkSettingsInterface *settings, voidCallbackP
   randomSeed(getChipId());
 }
 
-boolean YoYoWiFiManager::begin(char const *apName, char const *apPassword, bool autoconnect) {
+boolean YoYoWiFiManager::begin(char const *apName, char const *apPassword, bool autoconnect, bool peerconnect) {
   running = true;
 
   addPeerNetwork((char *)apName, (char *)apPassword);
@@ -51,7 +51,8 @@ boolean YoYoWiFiManager::begin(char const *apName, char const *apPassword, bool 
     setMode(YY_MODE_CLIENT, true);
   }
   else {
-    setMode(YY_MODE_PEER_CLIENT, true); //attempt to join peer network;
+    if(peerconnect) setMode(YY_MODE_PEER_CLIENT, true); //attempt to join peer network;
+    else            setMode(YY_MODE_PEER_SERVER, true);
   }
 
   return(true);
