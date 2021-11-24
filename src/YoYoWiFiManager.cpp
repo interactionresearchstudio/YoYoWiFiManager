@@ -809,7 +809,16 @@ void YoYoWiFiManager::onYoYoMessagePOST(JsonVariant message, AsyncWebServerReque
     if(yoYoCommandPostHandler) {
       success = yoYoCommandPostHandler(message);
     }
-    request->send(success ? 200 : 400);
+
+    if(success) {
+      if(message["payload"].size() > 0) {
+        String payload;
+        serializeJson(message["payload"], payload);
+        request->send(200, "application/javascript", payload.c_str());
+      }
+      else request->send(200);
+    }
+    else request->send(400);
   }
   //when the response is sent, the client is closed and freed from the memory
 
