@@ -3,7 +3,7 @@
 YoYoWiFiManager::YoYoWiFiManager() {
 }
 
-void YoYoWiFiManager::init(YoYoNetworkSettingsInterface *settings, voidCallbackPtr onYY_CONNECTEDhandler, jsonCallbackPtr getHandler, jsonCallbackPtr postHandler, bool stopWebServerOnceConnected, int webServerPort, int wifiLEDPin, bool wifiLEDOn, yy_storage_t storageType) {
+void YoYoWiFiManager::init(YoYoNetworkSettingsInterface *settings, voidCallbackPtr onYY_CONNECTEDhandler, jsonCallbackPtr getHandler, jsonCallbackPtr postHandler, bool stopWebServerOnceConnected, int webServerPort, int wifiLEDPin, bool wifiLEDOn, yy_storage_t storageType, uint8_t csPin) {
   this -> settings = settings;
   this -> onYY_CONNECTEDhandler = onYY_CONNECTEDhandler;
   this -> yoYoCommandGetHandler = getHandler;
@@ -29,7 +29,7 @@ void YoYoWiFiManager::init(YoYoNetworkSettingsInterface *settings, voidCallbackP
       if(SPIFFS.begin())  this -> storageType = YY_SPIFFS_STORAGE;
       break;
     case YY_SD_STORAGE:
-      if(SD.begin(SD_CS))      this -> storageType = YY_SD_STORAGE;
+      if(SD.begin(csPin)) this -> storageType = YY_SD_STORAGE;
       break;
   }
  
@@ -59,6 +59,10 @@ boolean YoYoWiFiManager::begin(char const *apName, char const *apPassword, bool 
 }
 
 void YoYoWiFiManager::end() {
+  Serial.println("YoYoWiFiManager::end()");
+
+  setMode(YY_MODE_NONE, true);
+  WiFi.disconnect();
   running = false;
 }
 
@@ -195,37 +199,41 @@ bool YoYoWiFiManager::findNetwork(char const *ssid, char *matchingSSID, bool aut
   return(result);
 }
 
+bool YoYoWiFiManager::isRunning() {
+  return(running);
+}
+
 yy_status_t YoYoWiFiManager::getStatus() {
-  yy_status_t yyStatus = currentStatus;
+  yy_status_t yyStatus = YY_STOPPED;
 
-  uint8_t wlStatus = WiFi.status();
-  if(currentMode != YY_MODE_PEER_SERVER && millis() > (lastUpdatedMultiAtMs + MIN_MULTIUPDATEINTERVAL)) {
-    wlStatus = wifiMulti.run();
-    lastUpdatedMultiAtMs = millis();
-  }
-
-  if(wlStatus == WL_CONNECTED) {
-    if(WiFi.SSID().equals(peerNetworkSSID)) {
-      yyStatus = YY_CONNECTED_PEER_CLIENT;
+  if(running) {
+    uint8_t wlStatus = WiFi.status();
+    if(currentMode != YY_MODE_PEER_SERVER && millis() > (lastUpdatedMultiAtMs + MIN_MULTIUPDATEINTERVAL)) {
+      wlStatus = wifiMulti.run();
+      lastUpdatedMultiAtMs = millis();
     }
-    else yyStatus = YY_CONNECTED;
-  }
-  else if(currentMode == YY_MODE_PEER_SERVER && hasClients()) {
-    yyStatus = YY_CONNECTED_PEER_SERVER;
-  }
-  else {
-    yyStatus = (yy_status_t) wlStatus;  //Otherwise yy_status_t and wl_status_t are value compatible
+
+    if(wlStatus == WL_CONNECTED) {
+      if(WiFi.SSID().equals(peerNetworkSSID)) {
+        yyStatus = YY_CONNECTED_PEER_CLIENT;
+      }
+      else yyStatus = YY_CONNECTED;
+    }
+    else if(currentMode == YY_MODE_PEER_SERVER && hasClients()) {
+      yyStatus = YY_CONNECTED_PEER_SERVER;
+    }
+    else {
+      yyStatus = (yy_status_t) wlStatus;  //Otherwise yy_status_t and wl_status_t are value compatible
+    }
   }
 
   return(yyStatus);
 }
 
 uint8_t YoYoWiFiManager::loop() {
-  yy_status_t yyStatus = (yy_status_t) WiFi.status();
-
   if(running) {
     updateMode();
-    yyStatus = getStatus();
+    yy_status_t yyStatus = getStatus();
     
     //Only when the status changes:
     if(currentStatus != yyStatus) {
@@ -291,7 +299,7 @@ uint8_t YoYoWiFiManager::loop() {
 }
 
 void YoYoWiFiManager::updateWifiLED() {
-  if(wifiLEDOn >= 0) {
+  if(this -> wifiLEDPin >= 0) {
     if(running) {
       bool blink = ((millis() / 1000) % 2) == 0;
 
@@ -310,6 +318,7 @@ void YoYoWiFiManager::updateWifiLED() {
           break;
       }
     }
+    else setWifiLED(LOW);
   }
 }
 
@@ -455,8 +464,11 @@ char * YoYoWiFiManager::getStatusAsString(char *string) {
 char * YoYoWiFiManager::getStatusAsString(yy_status_t status, char *string) {
   if(string != NULL) {
     string[0] = '\0';
-    
+
     switch(status) {
+      case YY_STOPPED:
+        strcpy(string, "YY_STOPPED");
+        break;
       case YY_CONNECTED:
         strcpy(string, "YY_CONNECTED");
         break;
@@ -600,7 +612,7 @@ void YoYoWiFiManager::handleCaptivePortalRequest(AsyncWebServerRequest *request)
       sendIndexFile(request);
     }
     else {
-      request->send(304);
+      request->send(304); //304 Not Modified client redirection response code indicates that there is no need to retransmit the requested resources
     }
 }
 

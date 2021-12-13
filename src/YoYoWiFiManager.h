@@ -20,7 +20,7 @@
   #include <AsyncTCP.h>
   #include <SPIFFS.h>
 #endif
-#include <SD.h>
+#include <SD.h> //https://www.arduino.cc/en/Reference/SD
 #include <SPI.h>
 #include <FS.h>
 #include <ESPAsyncWebServer.h>
@@ -53,6 +53,7 @@
 #define MIN_MULTIUPDATEINTERVAL 500
 
 typedef enum {
+  YY_STOPPED          = WL_NO_SHIELD,
   //compatibility with wl_status_t (wl_definitions.h)
   YY_NO_SHIELD        = WL_NO_SHIELD,
   YY_IDLE_STATUS      = WL_IDLE_STATUS,
@@ -98,7 +99,7 @@ class YoYoWiFiManager : public AsyncWebHandler {
     char peerNetworkPassword[PASSWORD_MAX_LENGTH];
     bool peerNetworkSet();
     
-    yy_status_t currentStatus = YY_IDLE_STATUS;
+    yy_status_t currentStatus = YY_STOPPED;
     uint32_t lastUpdatedMultiAtMs = 0;
 
     const byte DNS_PORT = 53;
@@ -184,13 +185,14 @@ class YoYoWiFiManager : public AsyncWebHandler {
   public:
     YoYoWiFiManager();
 
-    void init(YoYoNetworkSettingsInterface *settings = NULL, voidCallbackPtr onYY_CONNECTEDhandler = NULL, jsonCallbackPtr getHandler = NULL, jsonCallbackPtr postHandler = NULL, bool stopWebServerOnceConnected = true, int webServerPort = 80, int wifiLEDPin = LED_BUILTIN, bool wifiLEDOn = LED_BUILTIN_ON, yy_storage_t storageType = YY_SPIFFS_STORAGE);
+    void init(YoYoNetworkSettingsInterface *settings = NULL, voidCallbackPtr onYY_CONNECTEDhandler = NULL, jsonCallbackPtr getHandler = NULL, jsonCallbackPtr postHandler = NULL, bool stopWebServerOnceConnected = true, int webServerPort = 80, int wifiLEDPin = LED_BUILTIN, bool wifiLEDOn = LED_BUILTIN_ON, yy_storage_t storageType = YY_SPIFFS_STORAGE, uint8_t csPin = SD_CS);
     boolean begin(char const *apName, char const *apPassword = NULL, bool autoconnect = true, bool peerconnect = true);
     void end();
     void connect();
     void connect(char const *ssid, char const *password);
 
     uint8_t loop();
+    bool isRunning();
     yy_status_t getStatus();
     uint32_t getChipId();
 
