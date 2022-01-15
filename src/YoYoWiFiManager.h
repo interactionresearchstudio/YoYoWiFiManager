@@ -20,7 +20,7 @@
   #include <AsyncTCP.h>
   #include <SPIFFS.h>
 #endif
-#include <SD.h> //https://www.arduino.cc/en/Reference/SD
+#include <SD.h> //https://www.arduino.cc/en/Reference/SD + https://github.com/arduino-libraries/SD
 #include <SPI.h>
 #include <FS.h>
 #include <ESPAsyncWebServer.h>
@@ -75,6 +75,7 @@ typedef enum {
 } yy_storage_t;
 
 class YoYoWiFiManager : public AsyncWebHandler {
+  using File = fs::File;
   public:
   typedef enum {
     YY_MODE_NONE,
@@ -121,6 +122,9 @@ class YoYoWiFiManager : public AsyncWebHandler {
     uint32_t serverTimeOutAtMs = 0;
     void updateServerTimeOut();
     bool serverHasTimedOut();
+
+
+    uint32_t activeRequestsTimeOutAtMs = 0;
 
     yy_mode_t updateTimeOuts();
 

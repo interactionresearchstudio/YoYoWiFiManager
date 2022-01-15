@@ -292,6 +292,11 @@ uint8_t YoYoWiFiManager::loop() {
     }
 
     setMode(updateTimeOuts());
+
+    if(millis() > activeRequestsTimeOutAtMs) {
+      activeRequests = max(0, activeRequests-1);
+      activeRequestsTimeOutAtMs = millis() + 300;
+    }
   }
   updateWifiLED();
 
@@ -564,26 +569,32 @@ void YoYoWiFiManager::handleRequest(AsyncWebServerRequest *request) {
   Serial.print("handleRequest: ");
   Serial.println(request->url());
 
-  activeRequests++;
-
   if (request->method() == HTTP_GET) {
-    if(request->url().startsWith("/yoyo")) {
-      onYoYoRequestGET(request);
-    }
-    else if (fileExists(request->url())) {
-      sendFile(request, request->url());
-    }
-    else if (currentMode == YY_MODE_PEER_SERVER) {
-      handleCaptivePortalRequest(request);
-    }
-    else if(request->url().equals("/")) {
-      sendIndexFile(request);
-    }
-    else if(request->url().endsWith("/")) {
-      sendFile(request, request->url() + "index.html");
+    activeRequests++;
+    Serial.printf("activeRequests: %i\n", activeRequests);
+
+    if(activeRequests > 0) {
+      request->send(503);  //Service Unavailable
     }
     else {
-      request->send(404);
+      if(request->url().startsWith("/yoyo")) {
+        onYoYoRequestGET(request);
+      }
+      else if (fileExists(request->url())) {
+        sendFile(request, request->url());
+      }
+      else if (currentMode == YY_MODE_PEER_SERVER) {
+        handleCaptivePortalRequest(request);
+      }
+      else if(request->url().equals("/")) {
+        sendIndexFile(request);
+      }
+      else if(request->url().endsWith("/")) {
+        sendFile(request, request->url() + "index.html");
+      }
+      else {
+        request->send(404);
+      }
     }
   }
   else if (request->method() == HTTP_POST) {
@@ -592,8 +603,6 @@ void YoYoWiFiManager::handleRequest(AsyncWebServerRequest *request) {
   else {
     request->send(400);
   }
-
-  activeRequests--;
 }
 
 void YoYoWiFiManager::handleCaptivePortalRequest(AsyncWebServerRequest *request) {
@@ -626,13 +635,19 @@ void YoYoWiFiManager::handleBody(AsyncWebServerRequest * request, uint8_t *data,
     request->send(400); //GETs are expected to have no body and then be processes by handleRequest()
   }
   else if (request->method() == HTTP_POST) {
-    if(request->url().startsWith("/yoyo")) {
+    if(activeRequests > 8) {
+      request->send(503);  //Service Unavailable
+    }
+    else if(request->url().startsWith("/yoyo")) {
       onYoYoRequestPOST(data, len, request);
     }
     else request->send(404);
   }
   else if (request->method() == HTTP_DELETE) {
-    if(request->url().startsWith("/yoyo")) {
+    if(activeRequests > 8) {
+      request->send(503);  //Service Unavailable
+    }
+    else if(request->url().startsWith("/yoyo")) {
       onYoYoRequestDELETE(data, len, request);
     }
     else request->send(404);
@@ -640,8 +655,6 @@ void YoYoWiFiManager::handleBody(AsyncWebServerRequest * request, uint8_t *data,
   else {
     request->send(400);
   }
-
-  activeRequests--;
 }
 
 bool YoYoWiFiManager::fileExists(String path) {
@@ -658,6 +671,8 @@ bool YoYoWiFiManager::fileExists(String path) {
       break;
   }
 
+
+
   return(result);
 }
 
@@ -671,6 +686,8 @@ void YoYoWiFiManager::sendFile(AsyncWebServerRequest * request, String path) {
         break;
       case YY_SD_STORAGE:
         #if defined(ESP32)
+          //f = SD.open(path, FILE_READ);
+          //request->send(f, path, getMimeType(path));
           request->send(SD, path, getMimeType(path));
         #elif defined(ESP8266)
           //TODO: fix for ESP8266 SD object
