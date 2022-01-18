@@ -88,6 +88,7 @@ class YoYoWiFiManager : public AsyncWebHandler {
 
   private:
     bool running = false;
+    fs::FS *fs = NULL;
     StaticJsonDocument<8192> broadcastMessageList;   //TODO: this should be dynamic?
 
     #if defined(ESP8266)

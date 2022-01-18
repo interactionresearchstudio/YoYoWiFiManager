@@ -26,10 +26,17 @@ void YoYoWiFiManager::init(YoYoNetworkSettingsInterface *settings, voidCallbackP
   this -> storageType = YY_NO_STORAGE;
   switch (storageType) {
     case YY_SPIFFS_STORAGE:
-      if(SPIFFS.begin())  this -> storageType = YY_SPIFFS_STORAGE;
+      if(SPIFFS.begin()) {
+        fs = &SPIFFS;
+        this -> storageType = YY_SPIFFS_STORAGE;
+      }
       break;
     case YY_SD_STORAGE:
-      if(SD.begin(csPin)) this -> storageType = YY_SD_STORAGE;
+      //TODO: fix for ESP8266 SD object?
+      if(SD.begin(csPin)) {
+        fs = &SD;
+        this -> storageType = YY_SD_STORAGE;
+      }
       break;
   }
  
@@ -660,18 +667,9 @@ void YoYoWiFiManager::handleBody(AsyncWebServerRequest * request, uint8_t *data,
 bool YoYoWiFiManager::fileExists(String path) {
   bool result = false;
 
-  switch (storageType) {
-    case YY_SPIFFS_STORAGE:
-      result = SPIFFS.exists(path);
-      break;
-    case YY_SD_STORAGE:
-      result = SD.exists(path);
-      break;
-    case YY_NO_STORAGE:
-      break;
+  if(fs) {
+    result = fs -> exists(path);
   }
-
-
 
   return(result);
 }
@@ -679,23 +677,8 @@ bool YoYoWiFiManager::fileExists(String path) {
 void YoYoWiFiManager::sendFile(AsyncWebServerRequest * request, String path) {
   Serial.println("handleFileRead: " + path);
 
-  if (fileExists(path)) {
-    switch (storageType) {
-      case YY_SPIFFS_STORAGE:
-        request->send(SPIFFS, path, getMimeType(path));
-        break;
-      case YY_SD_STORAGE:
-        #if defined(ESP32)
-          //f = SD.open(path, FILE_READ);
-          //request->send(f, path, getMimeType(path));
-          request->send(SD, path, getMimeType(path));
-        #elif defined(ESP8266)
-          //TODO: fix for ESP8266 SD object
-        #endif
-        break;
-      case YY_NO_STORAGE:
-        break;
-    }
+  if (fs && fileExists(path)) {
+    request->send(*fs, path, getMimeType(path));
   }
   else {
     request->send(404);
