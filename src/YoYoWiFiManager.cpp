@@ -405,7 +405,7 @@ bool YoYoWiFiManager::updateMode() {
         break;
       case YY_MODE_CLIENT:
         WiFi.mode(WIFI_STA);
-        Serial.println("about to start server...");
+        Serial.printf("about to start server...\t%i\n", stopWebServerOnceConnected);
         if(stopWebServerOnceConnected) stopWebServer();
         else startWebServer();
         updateClientTimeOut();
@@ -569,6 +569,7 @@ YoYoWiFiManager::yy_mode_t YoYoWiFiManager::updateTimeOuts() {
 
 bool YoYoWiFiManager::canHandle(AsyncWebServerRequest *request) {
   //we can handle anything!
+
   return true;
 }
 
@@ -580,29 +581,25 @@ void YoYoWiFiManager::handleRequest(AsyncWebServerRequest *request) {
     activeRequests++;
     Serial.printf("activeRequests: %i\n", activeRequests);
 
-    if(activeRequests > 0) {
-      request->send(503);  //Service Unavailable
+    if(request->url().startsWith("/yoyo")) {
+      onYoYoRequestGET(request);
+    }
+    else if (fileExists(request->url())) {
+      sendFile(request, request->url());
+    }
+    else if (currentMode == YY_MODE_PEER_SERVER && getMimeType(request->url()).startsWith("text/")) {
+      handleCaptivePortalRequest(request);
+    }
+    else if(request->url().equals("/")) {
+      sendIndexFile(request);
+    }
+    else if(request->url().endsWith("/")) {
+      sendFile(request, request->url() + "index.html");
     }
     else {
-      if(request->url().startsWith("/yoyo")) {
-        onYoYoRequestGET(request);
-      }
-      else if (fileExists(request->url())) {
-        sendFile(request, request->url());
-      }
-      else if (currentMode == YY_MODE_PEER_SERVER) {
-        handleCaptivePortalRequest(request);
-      }
-      else if(request->url().equals("/")) {
-        sendIndexFile(request);
-      }
-      else if(request->url().endsWith("/")) {
-        sendFile(request, request->url() + "index.html");
-      }
-      else {
-        request->send(404);
-      }
+      request->send(404);
     }
+    activeRequests--;
   }
   else if (request->method() == HTTP_POST) {
     request->send(400); //POSTs are expected to have a body and then be processes by handleBody()
@@ -613,23 +610,27 @@ void YoYoWiFiManager::handleRequest(AsyncWebServerRequest *request) {
 }
 
 void YoYoWiFiManager::handleCaptivePortalRequest(AsyncWebServerRequest *request) {
-    if (request->url().endsWith(".html") || 
-              request->url().endsWith("/") ||
-              request->url().endsWith("generate_204") ||
-              request->url().endsWith("redirect"))  {
-      sendIndexFile(request);
-    }
-    else if (request->url().endsWith("connecttest.txt") || 
-              request->url().endsWith("ncsi.txt")) {
-      request->send(200, "text/plain", "Microsoft NCSI");
-    }
-    else if (strstr(request->url().c_str(), "generate_204_") != NULL) {
-      Serial.println("you must be huawei!");
-      sendIndexFile(request);
-    }
-    else {
-      request->send(304); //304 Not Modified client redirection response code indicates that there is no need to retransmit the requested resources
-    }
+  Serial.printf("handleCaptivePortalRequest %s\n", request->url().c_str());
+
+  //|| request->url().endsWith("/bag")
+
+  if (request->url().endsWith(".html") || 
+            request->url().endsWith("/") ||
+            request->url().endsWith("generate_204") ||
+            request->url().endsWith("redirect"))  {
+    sendIndexFile(request);
+  }
+  else if (request->url().endsWith("connecttest.txt") || 
+            request->url().endsWith("ncsi.txt")) {
+    request->send(200, "text/plain", "Microsoft NCSI");
+  }
+  else if (strstr(request->url().c_str(), "generate_204_") != NULL) {
+    Serial.println("you must be huawei!");
+    sendIndexFile(request);
+  }
+  else {
+    request->send(304); //304 Not Modified client redirection response code indicates that there is no need to retransmit the requested resources
+  }
 }
 
 void YoYoWiFiManager::handleBody(AsyncWebServerRequest * request, uint8_t *data, size_t len, size_t index, size_t total) {
@@ -664,25 +665,51 @@ void YoYoWiFiManager::handleBody(AsyncWebServerRequest * request, uint8_t *data,
   }
 }
 
-bool YoYoWiFiManager::fileExists(String path) {
-  bool result = false;
+int YoYoWiFiManager::fileExists(String path, String defaultIndexFile) {
+  int result = 0;
 
   if(fs) {
-    result = fs -> exists(path);
+    if(path.endsWith("/")) {
+      path += defaultIndexFile;
+    }
+
+    File f = fs->open(path,"r");
+    if(f) {
+      if(f.size() > 0) result = 1;
+      else result = 2;  //Attempt to catch: E (18543) vfs_fat: open: no free file descriptors
+      f.close();
+    }
   }
 
   return(result);
 }
 
-void YoYoWiFiManager::sendFile(AsyncWebServerRequest * request, String path) {
-  Serial.println("handleFileRead: " + path);
+void YoYoWiFiManager::sendFile(AsyncWebServerRequest * request, String path, String defaultIndexFile) {
+  if (fs) {
+    if(path.endsWith("/")) {
+      path += defaultIndexFile;
+    }
 
-  if (fs && fileExists(path)) {
-    request->send(*fs, path, getMimeType(path));
+    int result = fileExists(path);
+
+    Serial.printf("sendFile: %s (%i)\n", path.c_str(), result);
+    switch(result) {
+      case 0:
+        request->send(404);
+        break;
+      case 1:
+        request->send(*fs, path, getMimeType(path));
+        break;
+      case 2:
+        AsyncWebServerResponse *response = request->beginResponse(429); //Too Many Requests
+        int delaySec = (int)random(1,5);
+        response->addHeader("Retry-After", String(delaySec));
+        request->send(response);
+        Serial.printf("Too Many Requests\t%s\t%i\n", path.c_str(), delaySec);
+        break;
+    }
   }
-  else {
-    request->send(404);
-  }
+  else request->send(404);
 }
 
 void YoYoWiFiManager::setRootIndexFile(String rootIndexFile) {

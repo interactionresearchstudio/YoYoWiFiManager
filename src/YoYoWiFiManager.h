@@ -22,6 +22,7 @@
 #endif
 #include <SD.h> //https://www.arduino.cc/en/Reference/SD + https://github.com/arduino-libraries/SD
 #include <SPI.h>
+#define FS_NO_GLOBALS
 #include <FS.h>
 #include <ESPAsyncWebServer.h>
 
@@ -233,8 +234,8 @@ class YoYoWiFiManager : public AsyncWebHandler {
     int getOUI(uint8_t *mac);
     int getOUI(uint8_t a, uint8_t b, uint8_t c, uint8_t d = 0, uint8_t e = 0, uint8_t f = 0);
 
-    bool fileExists(String path);
-    void sendFile(AsyncWebServerRequest * request, String path);
+    int fileExists(String path, String defaultIndexFile = "index.html");
+    void sendFile(AsyncWebServerRequest * request, String path, String defaultIndexFile = "index.html");
     void sendIndexFile(AsyncWebServerRequest * request);
     String getMimeType(String filename);
 
