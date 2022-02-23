@@ -19,7 +19,6 @@
   #include <esp_wifi.h>
   #include <AsyncTCP.h>
   #include <SPIFFS.h>
-  #include <esp_task_wdt.h>
 #endif
 #include <SD.h> //https://www.arduino.cc/en/Reference/SD + https://github.com/arduino-libraries/SD
 #include <SPI.h>
