@@ -19,6 +19,7 @@
   #include <esp_wifi.h>
   #include <AsyncTCP.h>
   #include <SPIFFS.h>
+  #include <esp_task_wdt.h>
 #endif
 #include <SD.h> //https://www.arduino.cc/en/Reference/SD + https://github.com/arduino-libraries/SD
 #include <SPI.h>
@@ -47,11 +48,12 @@
 
 #define SSID_MAX_LENGTH 32
 #define PASSWORD_MAX_LENGTH 64
-#define MIN_WIFICLIENTTIMEOUT 30000
+#define MIN_WIFICLIENTTIMEOUT 10000
 #define MIN_WIFISERVERTIMEOUT 60000
 #define SCAN_NETWORKS_MIN_INT 30000
 #define MIN_CLIENTLISTUPDATEINTERVAL 3000
 #define MIN_MULTIUPDATEINTERVAL 500
+#define TICKINTERVAL_MS 100
 
 typedef enum {
   YY_STOPPED          = WL_NO_SHIELD,
@@ -78,24 +80,29 @@ typedef enum {
 class YoYoWiFiManager : public AsyncWebHandler {
   using File = fs::File;
   public:
-  typedef enum {
-    YY_MODE_NONE,
-    YY_MODE_CLIENT,
-    YY_MODE_PEER_CLIENT,
-    YY_MODE_PEER_SERVER
-  } yy_mode_t;
-  yy_mode_t currentMode = YY_MODE_NONE;
-  yy_mode_t nextMode = YY_MODE_NONE;
+    typedef enum {
+      YY_MODE_NONE,
+      YY_MODE_CLIENT,
+      YY_MODE_PEER_CLIENT,
+      YY_MODE_PEER_SERVER
+    } yy_mode_t;
+    yy_mode_t currentMode = YY_MODE_NONE;
+    yy_mode_t nextMode = YY_MODE_NONE;
 
   private:
     bool running = false;
+    unsigned long tickDueAtMs = 0;
+    int promisedBytes = 0;
+
     fs::FS *fs = NULL;
     StaticJsonDocument<8192> broadcastMessageList;   //TODO: this should be dynamic?
 
     #if defined(ESP8266)
       ESP8266WiFiMulti wifiMulti;
+      const int maxPromisedBytesPerTick = 5000;
     #elif defined(ESP32)
       WiFiMulti wifiMulti;
+      const int maxPromisedBytesPerTick = 8000; //dependant on module, the work it is doing and the speed of the SD card
     #endif
 
     char peerNetworkSSID[SSID_MAX_LENGTH];
@@ -112,7 +119,6 @@ class YoYoWiFiManager : public AsyncWebHandler {
     int webServerPort = 80;
     AsyncWebServer *webserver = NULL;
     bool stopWebServerOnceConnected = true;
-    int activeRequests = 0;
 
     uint32_t clientTimeOutAtMs = 0;
     void updateClientTimeOut();
@@ -124,9 +130,6 @@ class YoYoWiFiManager : public AsyncWebHandler {
     uint32_t serverTimeOutAtMs = 0;
     void updateServerTimeOut();
     bool serverHasTimedOut();
-
-
-    uint32_t activeRequestsTimeOutAtMs = 0;
 
     yy_mode_t updateTimeOuts();
 
@@ -149,6 +152,8 @@ class YoYoWiFiManager : public AsyncWebHandler {
 
     void startWebServer();
     void stopWebServer();
+
+    void tick();
 
     void addPeerNetwork(char *ssid, char *password);
     void addKnownNetworks();
@@ -207,7 +212,7 @@ class YoYoWiFiManager : public AsyncWebHandler {
     //AsyncWebHandler:
     bool canHandle(AsyncWebServerRequest *request);
     void handleRequest(AsyncWebServerRequest *request);
-    void handleCaptivePortalRequest(AsyncWebServerRequest *request);
+    int handleCaptivePortalRequest(AsyncWebServerRequest *request);
     void handleBody(AsyncWebServerRequest * request, uint8_t *data, size_t len, size_t index, size_t total);
 
     bool setCredentials(JsonVariant json);
@@ -235,18 +240,20 @@ class YoYoWiFiManager : public AsyncWebHandler {
     int getOUI(uint8_t a, uint8_t b, uint8_t c, uint8_t d = 0, uint8_t e = 0, uint8_t f = 0);
 
     int fileExists(String path, String defaultIndexFile = "index.html");
-    void sendFile(AsyncWebServerRequest * request, String path, String defaultIndexFile = "index.html");
-    void sendIndexFile(AsyncWebServerRequest * request);
+    int fileSize(String path, String defaultIndexFile = "index.html");
+    int sendFile(AsyncWebServerRequest * request, String path, String defaultIndexFile = "index.html");
+    int sendTooManyRequests(AsyncWebServerRequest * request);
+    int sendIndexFile(AsyncWebServerRequest * request);
     String getMimeType(String filename);
 
-    void onYoYoRequestGET(AsyncWebServerRequest *request);
-    void onYoYoRequestPOST(uint8_t *data, size_t len, AsyncWebServerRequest *request);
-    void onYoYoRequestUPLOAD(uint8_t *data, size_t len, AsyncWebServerRequest *request);
-    void onYoYoRequestDELETE(uint8_t *data, size_t len, AsyncWebServerRequest *request);
+    int onYoYoRequestGET(AsyncWebServerRequest *request);
+    int onYoYoRequestPOST(uint8_t *data, size_t len, AsyncWebServerRequest *request);
+    int onYoYoRequestUPLOAD(uint8_t *data, size_t len, AsyncWebServerRequest *request);
+    int onYoYoRequestDELETE(uint8_t *data, size_t len, AsyncWebServerRequest *request);
     
-    void onYoYoMessageGET(AsyncWebServerRequest *request);
-    void onYoYoMessagePOST(JsonVariant message, AsyncWebServerRequest *request);
-    void onYoYoMessageDELETE(JsonVariant message, AsyncWebServerRequest *request);
+    int onYoYoMessageGET(AsyncWebServerRequest *request);
+    int onYoYoMessagePOST(JsonVariant message, AsyncWebServerRequest *request);
+    int onYoYoMessageDELETE(JsonVariant message, AsyncWebServerRequest *request);
 
     void addBroadcastMessage(JsonVariant message);
     void processBroadcastMessageList();
