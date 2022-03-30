@@ -20,6 +20,7 @@
   #include <AsyncTCP.h>
   #include <SPIFFS.h>
 #endif
+//#include <SdFat.h>
 #include <SD.h> //https://www.arduino.cc/en/Reference/SD + https://github.com/arduino-libraries/SD
 #include <SPI.h>
 #define FS_NO_GLOBALS
