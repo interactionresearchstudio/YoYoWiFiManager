@@ -37,13 +37,13 @@
       #define LED_BUILTIN  2
     #endif
     #define LED_BUILTIN_ON LOW
-    #define SD_CS    15
+    //#define SD_CS    15
 #elif defined(ESP32)
     #ifndef LED_BUILTIN 
       #define LED_BUILTIN  2
     #endif
     #define LED_BUILTIN_ON HIGH
-    #define SD_CS    5
+    //#define SD_CS    5
 #endif    
 
 #define SSID_MAX_LENGTH 32
@@ -196,7 +196,7 @@ class YoYoWiFiManager : public AsyncWebHandler {
   public:
     YoYoWiFiManager();
 
-    void init(YoYoNetworkSettingsInterface *settings = NULL, voidCallbackPtr onYY_CONNECTEDhandler = NULL, jsonCallbackPtr getHandler = NULL, jsonCallbackPtr postHandler = NULL, bool stopWebServerOnceConnected = true, int webServerPort = 80, int wifiLEDPin = LED_BUILTIN, bool wifiLEDOn = LED_BUILTIN_ON, yy_storage_t storageType = YY_SPIFFS_STORAGE, uint8_t csPin = SD_CS);
+    void init(YoYoNetworkSettingsInterface *settings = NULL, voidCallbackPtr onYY_CONNECTEDhandler = NULL, jsonCallbackPtr getHandler = NULL, jsonCallbackPtr postHandler = NULL, bool stopWebServerOnceConnected = true, int webServerPort = 80, int wifiLEDPin = LED_BUILTIN, bool wifiLEDOn = LED_BUILTIN_ON, yy_storage_t storageType = YY_SPIFFS_STORAGE, uint8_t csPin = -1);
     boolean begin(char const *apName, char const *apPassword = NULL, bool autoconnect = true, bool peerconnect = true);
     void end();
     void connect();

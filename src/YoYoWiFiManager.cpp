@@ -33,7 +33,7 @@ void YoYoWiFiManager::init(YoYoNetworkSettingsInterface *settings, voidCallbackP
       break;
     case YY_SD_STORAGE:
       //TODO: fix for ESP8266 SD object?
-      if(SD.begin(csPin)) {
+      if(csPin == -1 || SD.begin(csPin)) {  //if csPin is -1 (default), SD.begin() is done externally
         fs = &SD;
         this -> storageType = YY_SD_STORAGE;
       }
