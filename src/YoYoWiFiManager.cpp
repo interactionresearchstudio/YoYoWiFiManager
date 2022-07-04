@@ -754,6 +754,7 @@ int YoYoWiFiManager::sendTooManyRequests(AsyncWebServerRequest * request) {
     delaySec += ((promisedBytes/maxPromisedBytesPerTick) * TICKINTERVAL_MS)/1000;
   }
   response->addHeader("Retry-After", String(delaySec));
+  request->send(response);
 
   return(429);
 }
