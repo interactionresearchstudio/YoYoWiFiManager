@@ -102,7 +102,7 @@ class YoYoWiFiManager : public AsyncWebHandler {
       const int maxPromisedBytesPerTick = 5000;
     #elif defined(ESP32)
       WiFiMulti wifiMulti;
-      const int maxPromisedBytesPerTick = 8000; //dependant on module, the work it is doing and the speed of the SD card
+      const int maxPromisedBytesPerTick = 10240; //dependant on module, the work it is doing and the speed of the SD card
     #endif
 
     char peerNetworkSSID[SSID_MAX_LENGTH];
