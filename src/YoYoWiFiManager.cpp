@@ -619,8 +619,9 @@ void YoYoWiFiManager::handleRequest(AsyncWebServerRequest *request) {
 
 int YoYoWiFiManager::handleCaptivePortalRequest(AsyncWebServerRequest *request) {
   int result = 500;
+  
+  //http://captive.apple.com/hotspot-detect.html
 
-  //|| request->url().endsWith("/bag")
 
   if (request->url().endsWith(".html") || 
             request->url().endsWith("/") ||
@@ -634,8 +635,12 @@ int YoYoWiFiManager::handleCaptivePortalRequest(AsyncWebServerRequest *request) 
     result = 200;
   }
   else if (strstr(request->url().c_str(), "generate_204_") != NULL) {
-    Serial.println("you must be huawei!");
+    //From Huawei device
     result = sendIndexFile(request);
+  }
+  else if(request->url().endsWith("wpad.dat")) {
+    //request->send(404);
+    //result = 404;
   }
   else {
     request->send(304); //304 Not Modified client redirection response code indicates that there is no need to retransmit the requested resources
