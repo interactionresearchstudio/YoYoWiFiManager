@@ -572,9 +572,7 @@ YoYoWiFiManager::yy_mode_t YoYoWiFiManager::updateTimeOuts() {
 //===============
 
 bool YoYoWiFiManager::canHandle(AsyncWebServerRequest *request) {
-  //we can handle anything!
-
-  return true;
+  return promisedBytes < maxPromisedBytesPerTick; //accept connection only if not too busy
 }
 
 void YoYoWiFiManager::handleRequest(AsyncWebServerRequest *request) {
@@ -619,7 +617,7 @@ void YoYoWiFiManager::handleRequest(AsyncWebServerRequest *request) {
 
 int YoYoWiFiManager::handleCaptivePortalRequest(AsyncWebServerRequest *request) {
   int result = 500;
-  
+
   //http://captive.apple.com/hotspot-detect.html
 
 
