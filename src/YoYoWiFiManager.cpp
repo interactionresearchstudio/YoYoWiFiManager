@@ -572,7 +572,8 @@ YoYoWiFiManager::yy_mode_t YoYoWiFiManager::updateTimeOuts() {
 //===============
 
 bool YoYoWiFiManager::canHandle(AsyncWebServerRequest *request) {
-  return promisedBytes < maxPromisedBytesPerTick; //accept connection only if not too busy
+  //return promisedBytes < maxPromisedBytesPerTick; //accept connection only if not too busy
+  return true;
 }
 
 void YoYoWiFiManager::handleRequest(AsyncWebServerRequest *request) {
