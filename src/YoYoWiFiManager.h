@@ -155,7 +155,6 @@ class YoYoWiFiManager : public AsyncWebHandler {
 
     void tick();
 
-    void addPeerNetwork(char *ssid, char *password);
     void addKnownNetworks();
     bool addNetwork(char const *ssid, char const *password, bool autosave = true);
 
@@ -216,6 +215,7 @@ class YoYoWiFiManager : public AsyncWebHandler {
     void handleBody(AsyncWebServerRequest * request, uint8_t *data, size_t len, size_t index, size_t total);
 
     bool setCredentials(JsonVariant json);
+    void addPeerNetwork(char *ssid, char *password);
 
     bool hasPeers();
     int countPeers();

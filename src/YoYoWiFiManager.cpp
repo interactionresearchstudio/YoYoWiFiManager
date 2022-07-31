@@ -5,6 +5,8 @@ YoYoWiFiManager::YoYoWiFiManager() {
 
 void YoYoWiFiManager::init(YoYoNetworkSettingsInterface *settings, voidCallbackPtr onYY_CONNECTEDhandler, jsonCallbackPtr getHandler, jsonCallbackPtr postHandler, bool stopWebServerOnceConnected, int webServerPort, int wifiLEDPin, bool wifiLEDOn, yy_storage_t storageType, uint8_t csPin) {
   this -> settings = settings;
+  if(this -> settings) this -> settings -> print();
+
   this -> onYY_CONNECTEDhandler = onYY_CONNECTEDhandler;
   this -> yoYoCommandGetHandler = getHandler;
   this -> yoYoCommandPostHandler = postHandler;
@@ -49,8 +51,10 @@ void YoYoWiFiManager::init(YoYoNetworkSettingsInterface *settings, voidCallbackP
 boolean YoYoWiFiManager::begin(char const *apName, char const *apPassword, bool autoconnect, bool peerconnect) {
   running = true;
 
-  addPeerNetwork((char *)apName, (char *)apPassword);
-  wifiMulti.run();  //prioritise joining peer networks over known networks
+  if(apName != NULL) {
+    addPeerNetwork((char *)apName, (char *)apPassword);
+    wifiMulti.run();  //prioritise joining peer networks over known networks
+  }
 
   if(autoconnect && settings && settings -> hasNetworkCredentials()) {
     Serial.println("network credentials available");

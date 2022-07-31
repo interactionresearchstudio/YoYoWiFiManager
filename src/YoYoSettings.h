@@ -203,6 +203,12 @@ class YoYoSettings : public DynamicJsonDocument, public YoYoNetworkSettingsInter
 
             return(networkBudgetBytes > freeBytes);
         }
+
+        void print() {
+            Serial.println("YoYoSettings:print()");
+            serializeJson(*this, Serial);
+            Serial.println();
+        }
 };
 
 #endif
