@@ -575,8 +575,7 @@ YoYoWiFiManager::yy_mode_t YoYoWiFiManager::updateTimeOuts() {
 //AsyncWebHandler
 //===============
 
-bool YoYoWiFiManager::canHandle(AsyncWebServerRequest *request) {
-  //return promisedBytes < maxPromisedBytesPerTick; //accept connection only if not too busy
+bool YoYoWiFiManager::canHandle(AsyncWebServerRequest *request) {  
   return true;
 }
 
@@ -617,7 +616,7 @@ void YoYoWiFiManager::handleRequest(AsyncWebServerRequest *request) {
     result = 400;
   }
 
-  Serial.printf("handleRequest: %s (%i)\n", request->url().c_str(), result);
+  Serial.printf("handleRequest: %s%s (%i)\n", request->host().c_str(), request->url().c_str(), result);
 }
 
 int YoYoWiFiManager::handleCaptivePortalRequest(AsyncWebServerRequest *request) {
@@ -710,10 +709,13 @@ int YoYoWiFiManager::fileSize(String path, String defaultIndexFile) {
   if(fs) {
     if(path.endsWith("/")) path += defaultIndexFile;
 
-    File f = fs->open(path,"r");
-    if(f) {
-      result = f.size();
-      f.close();
+    if(fs -> exists(path)) {
+      File f = fs->open(path,"r");
+
+      if(f) {
+        result = f.size();
+        f.close();
+      }
     }
   }
 
@@ -755,14 +757,14 @@ int YoYoWiFiManager::sendFile(AsyncWebServerRequest * request, String path, Stri
 }
 
 int YoYoWiFiManager::sendTooManyRequests(AsyncWebServerRequest * request) {
-  AsyncWebServerResponse *response = request->beginResponse(429); //Too Many Requests
+  // AsyncWebServerResponse *response = request->beginResponse(429); //Too Many Requests
 
-  int delaySec = (int)random(1,6);  //for requests that occur together attempt to space them out
-  if(promisedBytes>0) {
-    delaySec += ((promisedBytes/maxPromisedBytesPerTick) * TICKINTERVAL_MS)/1000;
-  }
-  response->addHeader("Retry-After", String(delaySec));
-  request->send(response);
+  // int delaySec = (int)random(1,6);  //for requests that occur together attempt to space them out
+  // if(promisedBytes>0) {
+  //   delaySec += ((promisedBytes/maxPromisedBytesPerTick) * TICKINTERVAL_MS)/1000;
+  // }
+  // response->addHeader("Retry-After", String(delaySec));
+  // request->send(response);
 
   return(429);
 }
@@ -1354,7 +1356,7 @@ void YoYoWiFiManager::getClientsAsJson(JsonDocument& jsonDoc) {
 
     int clientCount = updateClientList();
     for(int n = 0; n < clientCount; ++n) {
-      strcpy(ipAddress, ip4addr_ntoa(&(adapter_sta_list.sta[n].ip)));
+      strcpy(ipAddress, ip4addr_ntoa((const ip4_addr_t*) &(adapter_sta_list.sta[n].ip)));
       mac_addr_to_c_str(adapter_sta_list.sta[n].mac, macAddress);
 
       JsonObject client  = clients.createNestedObject();
