@@ -242,7 +242,7 @@ class YoYoWiFiManager : public AsyncWebHandler {
     int fileExists(String path, String defaultIndexFile = "index.html");
     int fileSize(String path, String defaultIndexFile = "index.html");
     int sendFile(AsyncWebServerRequest * request, String path, String defaultIndexFile = "index.html");
-    int sendTooManyRequests(AsyncWebServerRequest * request);
+    int noAnswer(AsyncWebServerRequest * request);
     int sendIndexFile(AsyncWebServerRequest * request);
     String getMimeType(String filename);
 
