@@ -35,10 +35,12 @@ void YoYoWiFiManager::init(YoYoNetworkSettingsInterface *settings, voidCallbackP
       break;
     case YY_SD_STORAGE:
       //TODO: fix for ESP8266 SD object?
-      if(csPin == -1 || SD.begin(csPin)) {  //if csPin is -1 (default), SD.begin() is done externally
-        fs = &SD;
-        this -> storageType = YY_SD_STORAGE;
-      }
+      #elif defined(ESP32)
+        if(csPin == -1 || SD.begin(csPin)) {  //if csPin is -1 (default), SD.begin() is done externally
+          fs = &SD;
+          this -> storageType = YY_SD_STORAGE;
+        }
+      #endif
       break;
   }
  
@@ -740,12 +742,12 @@ int YoYoWiFiManager::sendFile(AsyncWebServerRequest * request, String path, Stri
           request->send(*fs, path, getMimeType(path));
           break;
         case 2: //Attempt to catch: E (18543) vfs_fat: open: no free file descriptors
-          result = sendTooManyRequests(request);
+          result = noAnswer(request);
           break;
       }
     }
     else {
-      result = sendTooManyRequests(request);
+      result = noAnswer(request);
     }
   }
   else {
@@ -756,17 +758,8 @@ int YoYoWiFiManager::sendFile(AsyncWebServerRequest * request, String path, Stri
   return(result);
 }
 
-int YoYoWiFiManager::sendTooManyRequests(AsyncWebServerRequest * request) {
-  // AsyncWebServerResponse *response = request->beginResponse(429); //Too Many Requests
-
-  // int delaySec = (int)random(1,6);  //for requests that occur together attempt to space them out
-  // if(promisedBytes>0) {
-  //   delaySec += ((promisedBytes/maxPromisedBytesPerTick) * TICKINTERVAL_MS)/1000;
-  // }
-  // response->addHeader("Retry-After", String(delaySec));
-  // request->send(response);
-
-  return(429);
+int YoYoWiFiManager::noAnswer(AsyncWebServerRequest * request) {
+  return(-1);
 }
 
 void YoYoWiFiManager::setRootIndexFile(String rootIndexFile) {
