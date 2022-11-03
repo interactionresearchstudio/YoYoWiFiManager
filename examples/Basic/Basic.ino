@@ -1,3 +1,7 @@
+/*
+    Example documented here > https://github.com/interactionresearchstudio/YoYoWiFiManager#basic
+*/
+
 #include <YoYoWiFiManager.h>
 #include <YoYoSettings.h>
 

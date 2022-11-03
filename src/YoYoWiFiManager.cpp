@@ -3,13 +3,15 @@
 YoYoWiFiManager::YoYoWiFiManager() {
 }
 
-void YoYoWiFiManager::init(YoYoNetworkSettingsInterface *settings, voidCallbackPtr onYY_CONNECTEDhandler, jsonCallbackPtr getHandler, jsonCallbackPtr postHandler, bool startWebServerOnceConnected, int webServerPort, int wifiLEDPin, bool wifiLEDOn) {
+void YoYoWiFiManager::init(YoYoNetworkSettingsInterface *settings, voidCallbackPtr onYY_CONNECTEDhandler, jsonCallbackPtr getHandler, jsonCallbackPtr postHandler, bool stopWebServerOnceConnected, int webServerPort, int wifiLEDPin, bool wifiLEDOn, yy_storage_t storageType, uint8_t csPin) {
   this -> settings = settings;
+  if(this -> settings) this -> settings -> print();
+
   this -> onYY_CONNECTEDhandler = onYY_CONNECTEDhandler;
   this -> yoYoCommandGetHandler = getHandler;
   this -> yoYoCommandPostHandler = postHandler;
 
-  this -> startWebServerOnceConnected = startWebServerOnceConnected;
+  this -> stopWebServerOnceConnected = stopWebServerOnceConnected;
   this -> webServerPort = webServerPort;
 
   this -> wifiLEDPin = wifiLEDPin;
@@ -23,19 +25,38 @@ void YoYoWiFiManager::init(YoYoNetworkSettingsInterface *settings, voidCallbackP
   #endif
   memset(&adapter_sta_list, 0, sizeof(adapter_sta_list));
 
-  SPIFFS_ENABLED = SPIFFS.begin();
-
+  this -> storageType = YY_NO_STORAGE;
+  switch (storageType) {
+    case YY_SPIFFS_STORAGE:
+      if(SPIFFS.begin()) {
+        fs = &SPIFFS;
+        this -> storageType = YY_SPIFFS_STORAGE;
+      }
+      break;
+    case YY_SD_STORAGE:
+      //TODO: fix for ESP8266 SD object?
+      #if defined(ESP32)
+        if(csPin == -1 || SD.begin(csPin)) {  //if csPin is -1 (default), SD.begin() is done externally
+          fs = &SD;
+          this -> storageType = YY_SD_STORAGE;
+        }
+      #endif
+      break;
+  }
+ 
   peerNetworkSSID[0] = NULL;
   peerNetworkPassword[0] = NULL;
 
   randomSeed(getChipId());
 }
 
-boolean YoYoWiFiManager::begin(char const *apName, char const *apPassword, bool autoconnect) {
+boolean YoYoWiFiManager::begin(char const *apName, char const *apPassword, bool autoconnect, bool peerconnect) {
   running = true;
 
-  addPeerNetwork((char *)apName, (char *)apPassword);
-  wifiMulti.run();  //prioritise joining peer networks over known networks
+  if(apName != NULL) {
+    addPeerNetwork((char *)apName, (char *)apPassword);
+    wifiMulti.run();  //prioritise joining peer networks over known networks
+  }
 
   if(autoconnect && settings && settings -> hasNetworkCredentials()) {
     Serial.println("network credentials available");
@@ -43,13 +64,18 @@ boolean YoYoWiFiManager::begin(char const *apName, char const *apPassword, bool 
     setMode(YY_MODE_CLIENT, true);
   }
   else {
-    setMode(YY_MODE_PEER_CLIENT, true); //attempt to join peer network;
+    if(peerconnect) setMode(YY_MODE_PEER_CLIENT, true); //attempt to join peer network;
+    else            setMode(YY_MODE_PEER_SERVER, true);
   }
 
   return(true);
 }
 
 void YoYoWiFiManager::end() {
+  Serial.println("YoYoWiFiManager::end()");
+
+  setMode(YY_MODE_NONE, true);
+  WiFi.disconnect();
   running = false;
 }
 
@@ -186,37 +212,43 @@ bool YoYoWiFiManager::findNetwork(char const *ssid, char *matchingSSID, bool aut
   return(result);
 }
 
+bool YoYoWiFiManager::isRunning() {
+  return(running);
+}
+
 yy_status_t YoYoWiFiManager::getStatus() {
-  yy_status_t yyStatus = currentStatus;
+  yy_status_t yyStatus = YY_STOPPED;
 
-  uint8_t wlStatus = WiFi.status();
-  if(currentMode != YY_MODE_PEER_SERVER && millis() > (lastUpdatedMultiAtMs + MIN_MULTIUPDATEINTERVAL)) {
-    wlStatus = wifiMulti.run();
-    lastUpdatedMultiAtMs = millis();
-  }
-
-  if(wlStatus == WL_CONNECTED) {
-    if(WiFi.SSID().equals(peerNetworkSSID)) {
-      yyStatus = YY_CONNECTED_PEER_CLIENT;
+  if(running) {
+    uint8_t wlStatus = WiFi.status();
+    if(currentMode != YY_MODE_PEER_SERVER && millis() > (lastUpdatedMultiAtMs + MIN_MULTIUPDATEINTERVAL)) {
+      wlStatus = wifiMulti.run();
+      lastUpdatedMultiAtMs = millis();
     }
-    else yyStatus = YY_CONNECTED;
-  }
-  else if(currentMode == YY_MODE_PEER_SERVER && hasClients()) {
-    yyStatus = YY_CONNECTED_PEER_SERVER;
-  }
-  else {
-    yyStatus = (yy_status_t) wlStatus;  //Otherwise yy_status_t and wl_status_t are value compatible
+
+    if(wlStatus == WL_CONNECTED) {
+      if(WiFi.SSID().equals(peerNetworkSSID)) {
+        yyStatus = YY_CONNECTED_PEER_CLIENT;
+      }
+      else yyStatus = YY_CONNECTED;
+    }
+    else if(currentMode == YY_MODE_PEER_SERVER && hasClients()) {
+      yyStatus = YY_CONNECTED_PEER_SERVER;
+    }
+    else {
+      yyStatus = (yy_status_t) wlStatus;  //Otherwise yy_status_t and wl_status_t are value compatible
+    }
   }
 
   return(yyStatus);
 }
 
 uint8_t YoYoWiFiManager::loop() {
-  yy_status_t yyStatus = (yy_status_t) WiFi.status();
-
   if(running) {
+    if(millis() > tickDueAtMs) tick();
+
     updateMode();
-    yyStatus = getStatus();
+    yy_status_t yyStatus = getStatus();
     
     //Only when the status changes:
     if(currentStatus != yyStatus) {
@@ -281,8 +313,15 @@ uint8_t YoYoWiFiManager::loop() {
   return(currentStatus);
 }
 
+void YoYoWiFiManager::tick() {
+  if(promisedBytes > 0) {
+    promisedBytes = max(0, promisedBytes - maxPromisedBytesPerTick);
+  }
+  tickDueAtMs = millis() + TICKINTERVAL_MS;
+}
+
 void YoYoWiFiManager::updateWifiLED() {
-  if(wifiLEDOn >= 0) {
+  if(this -> wifiLEDPin >= 0) {
     if(running) {
       bool blink = ((millis() / 1000) % 2) == 0;
 
@@ -301,6 +340,7 @@ void YoYoWiFiManager::updateWifiLED() {
           break;
       }
     }
+    else setWifiLED(LOW);
   }
 }
 
@@ -323,8 +363,8 @@ void YoYoWiFiManager::setMode(yy_mode_t mode, bool update) {
 bool YoYoWiFiManager::updateMode() {
   bool result = false;
 
-  if(activeRequests > 0) {
-    //waiting for activeRequests to complete
+  if(promisedBytes > 0) {
+    //waiting for jobs to complete
     return(false);
   }
 
@@ -375,9 +415,9 @@ bool YoYoWiFiManager::updateMode() {
         break;
       case YY_MODE_CLIENT:
         WiFi.mode(WIFI_STA);
-        Serial.println("about to start server...");
-        if(startWebServerOnceConnected) startWebServer();
-        else stopWebServer();
+        Serial.printf("about to start server...\t%i\n", stopWebServerOnceConnected);
+        if(stopWebServerOnceConnected) stopWebServer();
+        else startWebServer();
         updateClientTimeOut();
         break;
       case YY_MODE_PEER_CLIENT: 
@@ -446,8 +486,11 @@ char * YoYoWiFiManager::getStatusAsString(char *string) {
 char * YoYoWiFiManager::getStatusAsString(yy_status_t status, char *string) {
   if(string != NULL) {
     string[0] = '\0';
-    
+
     switch(status) {
+      case YY_STOPPED:
+        strcpy(string, "YY_STOPPED");
+        break;
       case YY_CONNECTED:
         strcpy(string, "YY_CONNECTED");
         break;
@@ -534,117 +577,207 @@ YoYoWiFiManager::yy_mode_t YoYoWiFiManager::updateTimeOuts() {
 //AsyncWebHandler
 //===============
 
-bool YoYoWiFiManager::canHandle(AsyncWebServerRequest *request) {
-  //we can handle anything!
+bool YoYoWiFiManager::canHandle(AsyncWebServerRequest *request) {  
   return true;
 }
 
 void YoYoWiFiManager::handleRequest(AsyncWebServerRequest *request) {
-  Serial.print("handleRequest: ");
-  Serial.println(request->url());
-
-  activeRequests++;
+  int result = 500;
 
   if (request->method() == HTTP_GET) {
     if(request->url().startsWith("/yoyo")) {
-      onYoYoRequestGET(request);
+      result = onYoYoRequestGET(request);
     }
-    else if (SPIFFS_ENABLED && SPIFFS.exists(request->url())) {
-      sendFile(request, request->url());
+    else if (fileExists(request->url())) {
+      result = sendFile(request, request->url());
     }
-    else if (currentMode == YY_MODE_PEER_SERVER) {
-      handleCaptivePortalRequest(request);
+    else if (currentMode == YY_MODE_PEER_SERVER && getMimeType(request->url()).startsWith("text/")) {
+      result = handleCaptivePortalRequest(request);
     }
     else if(request->url().equals("/")) {
-      sendIndexFile(request);
+      result = sendIndexFile(request);
     }
     else if(request->url().endsWith("/")) {
-      sendFile(request, request->url() + "index.html");
+      result = sendFile(request, request->url() + "index.html");
     }
     else {
       request->send(404);
+      result = 404;
     }
   }
   else if (request->method() == HTTP_POST) {
     request->send(400); //POSTs are expected to have a body and then be processes by handleBody()
+    result = 400;
+  }
+  else if(request->method() == HTTP_HEAD) {
+    request->send(400);
+    result = 400;
   }
   else {
     request->send(400);
+    result = 400;
   }
 
-  activeRequests--;
+  Serial.printf("handleRequest: %s%s (%i)\n", request->host().c_str(), request->url().c_str(), result);
 }
 
-void YoYoWiFiManager::handleCaptivePortalRequest(AsyncWebServerRequest *request) {
-    if (request->url().endsWith(".html") || 
-              request->url().endsWith("/") ||
-              request->url().endsWith("generate_204") ||
-              request->url().endsWith("redirect"))  {
-      sendIndexFile(request);
-    }
-    else if (request->url().endsWith("connecttest.txt") || 
-              request->url().endsWith("ncsi.txt")) {
-      request->send(200, "text/plain", "Microsoft NCSI");
-    }
-    else if (strstr(request->url().c_str(), "generate_204_") != NULL) {
-      Serial.println("you must be huawei!");
-      sendIndexFile(request);
-    }
-    else {
-      request->send(304);
-    }
+int YoYoWiFiManager::handleCaptivePortalRequest(AsyncWebServerRequest *request) {
+  int result = 500;
+
+  //http://captive.apple.com/hotspot-detect.html
+
+
+  if (request->url().endsWith(".html") || 
+            request->url().endsWith("/") ||
+            request->url().endsWith("generate_204") ||
+            request->url().endsWith("redirect"))  {
+    result = sendIndexFile(request);
+  }
+  else if (request->url().endsWith("connecttest.txt") || 
+            request->url().endsWith("ncsi.txt")) {
+    request->send(200, "text/plain", "Microsoft NCSI");
+    result = 200;
+  }
+  else if (strstr(request->url().c_str(), "generate_204_") != NULL) {
+    //From Huawei device
+    result = sendIndexFile(request);
+  }
+  else if(request->url().endsWith("wpad.dat")) {
+    //request->send(404);
+    //result = 404;
+  }
+  else {
+    request->send(304); //304 Not Modified client redirection response code indicates that there is no need to retransmit the requested resources
+    result = 304;
+  }
+
+  return(result);
 }
 
 void YoYoWiFiManager::handleBody(AsyncWebServerRequest * request, uint8_t *data, size_t len, size_t index, size_t total) {
-  Serial.print("handleBody: ");
-  Serial.println(request->url());
-
-  activeRequests++;
+  int result = 0;
 
   if (request->method() == HTTP_GET) {
     request->send(400); //GETs are expected to have no body and then be processes by handleRequest()
+    result = 400;
   }
   else if (request->method() == HTTP_POST) {
     if(request->url().startsWith("/yoyo")) {
-      onYoYoRequestPOST(data, len, request);
+      result = onYoYoRequestPOST(data, len, request);
     }
-    else request->send(404);
+    else {
+      request->send(404);
+      result = 404;
+    }
   }
   else if (request->method() == HTTP_DELETE) {
     if(request->url().startsWith("/yoyo")) {
-      onYoYoRequestDELETE(data, len, request);
+      result = onYoYoRequestDELETE(data, len, request);
     }
-    else request->send(404);
+    else {
+      request->send(404);
+      result = 404;
+    }
   }
   else {
     request->send(400);
+    result = 400;
   }
 
-  activeRequests--;
+  Serial.printf("handleRequest: %s (%i)\n", request->url().c_str(), result);
 }
 
-void YoYoWiFiManager::sendFile(AsyncWebServerRequest * request, String path) {
-  Serial.println("handleFileRead: " + path);
+int YoYoWiFiManager::fileExists(String path, String defaultIndexFile) {
+  int result = 0;
 
-  if (SPIFFS_ENABLED && SPIFFS.exists(path)) {
-    request->send(SPIFFS, path, getMimeType(path));
+  switch(fileSize(path, defaultIndexFile)) {
+    case -1:
+      result = 0; //file does not exist
+      break;
+    case 0:
+      result = 2; //Attempt to catch: E (18543) vfs_fat: open: no free file descriptors
+      break;
+    default:
+      result = 1; //file does exist
+      break;
+  }
+
+  return(result);
+}
+
+int YoYoWiFiManager::fileSize(String path, String defaultIndexFile) {
+  int result = -1;
+
+  if(fs) {
+    if(path.endsWith("/")) path += defaultIndexFile;
+
+    if(fs -> exists(path)) {
+      File f = fs->open(path,"r");
+
+      if(f) {
+        result = f.size();
+        f.close();
+      }
+    }
+  }
+
+  return(result);
+}
+
+int YoYoWiFiManager::sendFile(AsyncWebServerRequest * request, String path, String defaultIndexFile) {
+  int result = 500;
+  
+  if (fs) {
+    if(promisedBytes < maxPromisedBytesPerTick) {
+      if(path.endsWith("/")) path += defaultIndexFile;
+
+      switch(fileExists(path)) {
+        case 0:
+          result = 404;
+          request->send(404);
+          break;
+        case 1:
+          result = 200;
+          promisedBytes += fileSize(path);
+          request->send(*fs, path, getMimeType(path));
+          break;
+        case 2: //Attempt to catch: E (18543) vfs_fat: open: no free file descriptors
+          result = noAnswer(request);
+          break;
+      }
+    }
+    else {
+      result = noAnswer(request);
+    }
   }
   else {
     request->send(404);
+    result = 404;
   }
+
+  return(result);
+}
+
+int YoYoWiFiManager::noAnswer(AsyncWebServerRequest * request) {
+  return(-1);
 }
 
 void YoYoWiFiManager::setRootIndexFile(String rootIndexFile) {
   this -> rootIndexFile = rootIndexFile;
 }
 
-void YoYoWiFiManager::sendIndexFile(AsyncWebServerRequest * request) {
-  if (SPIFFS_ENABLED && SPIFFS.exists(rootIndexFile)) {
-    sendFile(request, rootIndexFile);
+int YoYoWiFiManager::sendIndexFile(AsyncWebServerRequest * request) {
+  int result = 500;
+
+  if (fileExists(rootIndexFile)) {
+    result = sendFile(request, rootIndexFile);
   }
   else {
     request->send(200, "text/html", DEFAULT_INDEX_HTML);
+    result = 200;
   }
+
+  return(result);
 }
 
 String YoYoWiFiManager::getMimeType(String filename) {
@@ -665,15 +798,21 @@ String YoYoWiFiManager::getMimeType(String filename) {
   return "text/plain";
 }
 
-void YoYoWiFiManager::onYoYoRequestGET(AsyncWebServerRequest *request) {
+int YoYoWiFiManager::onYoYoRequestGET(AsyncWebServerRequest *request) {
+  int result = 200;
+  
   if (request->url().equals("/yoyo/networks"))         getNetworks(request);
   else if (request->url().equals("/yoyo/clients"))     getClients(request);
   else if (request->url().equals("/yoyo/peers"))       getPeers(request);
   else if (request->url().equals("/yoyo/credentials")) getCredentials(request);
-  else onYoYoMessageGET(request);
+  else {
+    result = onYoYoMessageGET(request);
+  }
+
+  return(result);
 }
 
-void YoYoWiFiManager::onYoYoMessageGET(AsyncWebServerRequest *request) {
+int YoYoWiFiManager::onYoYoMessageGET(AsyncWebServerRequest *request) {
   bool success = false;
 
   DynamicJsonDocument message(1024);
@@ -697,9 +836,13 @@ void YoYoWiFiManager::onYoYoMessageGET(AsyncWebServerRequest *request) {
   else {
     request->send(400);
   }
+
+  return(success?200:400);
 } 
 
-void YoYoWiFiManager::onYoYoRequestPOST(uint8_t *data, size_t len, AsyncWebServerRequest *request) {
+int YoYoWiFiManager::onYoYoRequestPOST(uint8_t *data, size_t len, AsyncWebServerRequest *request) {
+  int result = 500;
+  
   if(request -> contentType().equals("application/json")){
     //TODO: this limit seems artificial
     char *json = new char[1024];
@@ -716,11 +859,12 @@ void YoYoWiFiManager::onYoYoRequestPOST(uint8_t *data, size_t len, AsyncWebServe
       message["path"] = (char *) request->url().c_str();
       message["method"] = "POST";
 
-      onYoYoMessagePOST(message.as<JsonVariant>(), request); //does own request response
+      result = onYoYoMessagePOST(message.as<JsonVariant>(), request); //does own request response
     }
     else {
       Serial.printf("can't deserialize json\n%s\n\n", (const char*)json);
       request->send(400);
+      result = 400;
     }
 
     delete json;
@@ -728,33 +872,47 @@ void YoYoWiFiManager::onYoYoRequestPOST(uint8_t *data, size_t len, AsyncWebServe
   else if(request -> contentType().equals("multipart/form-data")) {
     //FILE UPLOAD
     request->send(200);
+    result = 200;
   }
   else {
     Serial.printf("unknown content type: %s\n", request -> contentType().c_str());
     request->send(400);
+    result = 400;
   }
+
+  return(result);
 }
 
-void YoYoWiFiManager::onYoYoRequestUPLOAD(uint8_t *data, size_t len, AsyncWebServerRequest *request) {
+int YoYoWiFiManager::onYoYoRequestUPLOAD(uint8_t *data, size_t len, AsyncWebServerRequest *request) {
+  int result = 500;
+
   if (request->url().equals("/yoyo/upload")) {
     request->send(200);
+    result = 200;
   }
   else {
     request->send(404);
+    result = 404;
   }
+
+  return(result);
 }
 
-void YoYoWiFiManager::onYoYoMessagePOST(JsonVariant message, AsyncWebServerRequest *request) {
+int YoYoWiFiManager::onYoYoMessagePOST(JsonVariant message, AsyncWebServerRequest *request) {
+  int result = 500;
+  
   bool success = false;
   Serial.println("onYoYoMessagePOST: " + message["path"].as<String>());
 
   if (message["path"] == "/yoyo/broadcast") {
     //TODO: request to broadcast a message from a peer - 404 unless YY_MODE_PEER_SERVER
     request->send(404);
+    result = 404;
   }
   else if (message["path"] == "/yoyo/credentials") {
     if(setCredentials(message["payload"])) {
       request->send(200, "application/javascript", getCredentialsAsJsonString()); //TODO: is this the problem?
+      result = 200;
 
       connect();  //this requests YY_MODE_CLIENT mode - which will be accessed on next loop() call
       message["broadcast"] = true;
@@ -763,6 +921,7 @@ void YoYoWiFiManager::onYoYoMessagePOST(JsonVariant message, AsyncWebServerReque
     else {
       Serial.println("can't set credentials from json");
       request->send(400);
+      result = 400;
     }
   }
   else {
@@ -770,7 +929,20 @@ void YoYoWiFiManager::onYoYoMessagePOST(JsonVariant message, AsyncWebServerReque
     if(yoYoCommandPostHandler) {
       success = yoYoCommandPostHandler(message);
     }
-    request->send(success ? 200 : 400);
+
+    if(success) {
+      if(message["payload"].size() > 0) {
+        String payload;
+        serializeJson(message["payload"], payload);
+        request->send(200, "application/javascript", payload.c_str());
+      }
+      else request->send(200);
+      result = 200;
+    }
+    else {
+      request->send(400);
+      result = 400;
+    }
   }
   //when the response is sent, the client is closed and freed from the memory
 
@@ -779,6 +951,8 @@ void YoYoWiFiManager::onYoYoMessagePOST(JsonVariant message, AsyncWebServerReque
       addBroadcastMessage(message);
     }
   }
+
+  return(result);
 }
 
 void YoYoWiFiManager::addBroadcastMessage(JsonVariant message) {
@@ -815,7 +989,7 @@ bool YoYoWiFiManager::broadcastMessage(JsonVariant message) {
   return(result);
 }
 
-void YoYoWiFiManager::onYoYoRequestDELETE(uint8_t *data, size_t len, AsyncWebServerRequest *request) {
+int YoYoWiFiManager::onYoYoRequestDELETE(uint8_t *data, size_t len, AsyncWebServerRequest *request) {
   //TODO fix this!
 
   //TODO: this limit seems artificial
@@ -833,9 +1007,13 @@ void YoYoWiFiManager::onYoYoRequestDELETE(uint8_t *data, size_t len, AsyncWebSer
   // }
 
   // delete json;
+
+  return(500);
 }
 
-void YoYoWiFiManager::onYoYoMessageDELETE(JsonVariant message, AsyncWebServerRequest *request) {
+int YoYoWiFiManager::onYoYoMessageDELETE(JsonVariant message, AsyncWebServerRequest *request) {
+  int result = 500;
+  
   bool success = false;
   Serial.println("onYoYoMessageDELETE: " + message["path"].as<String>());
 
@@ -843,8 +1021,10 @@ void YoYoWiFiManager::onYoYoMessageDELETE(JsonVariant message, AsyncWebServerReq
     //TODO: implement delete using YoYoSettings::removeNetwork()
     success = true;
   }
+  result = success ? 200 : 404;
+  request->send(result);
 
-  request->send(success ? 200 : 404);
+  return(result);
 }
 
 int YoYoWiFiManager::POST(const char *server, const char *path, JsonVariant payload, char *response) {
@@ -1169,7 +1349,7 @@ void YoYoWiFiManager::getClientsAsJson(JsonDocument& jsonDoc) {
 
     int clientCount = updateClientList();
     for(int n = 0; n < clientCount; ++n) {
-      strcpy(ipAddress, ip4addr_ntoa(&(adapter_sta_list.sta[n].ip)));
+      strcpy(ipAddress, ip4addr_ntoa((const ip4_addr_t*) &(adapter_sta_list.sta[n].ip)));
       mac_addr_to_c_str(adapter_sta_list.sta[n].mac, macAddress);
 
       JsonObject client  = clients.createNestedObject();

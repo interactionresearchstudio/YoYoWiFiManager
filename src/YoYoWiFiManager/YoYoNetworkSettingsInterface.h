@@ -17,6 +17,8 @@ class YoYoNetworkSettingsInterface {
 
     virtual bool isFull() = 0;
 
+    virtual void print() = 0;
+
     bool hasNetworkCredentials() {
       return(getNumberOfNetworkCredentials() > 0);
     }

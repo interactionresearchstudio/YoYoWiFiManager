@@ -10,7 +10,6 @@
   #include <ESP8266WiFiMulti.h>
   #include <ESPAsyncTCP.h>      //not currently available via Library Manager > https://github.com/me-no-dev/ESPAsyncTCP
   #include <ESP8266HTTPClient.h>
-  #include <FS.h>
   #include "YoYoWiFiManager/wifi_sta.h"
 
 #elif defined(ESP32)
@@ -21,6 +20,11 @@
   #include <AsyncTCP.h>
   #include <SPIFFS.h>
 #endif
+//#include <SdFat.h>
+#include <SD.h> //https://www.arduino.cc/en/Reference/SD + https://github.com/arduino-libraries/SD
+#include <SPI.h>
+#define FS_NO_GLOBALS
+#include <FS.h>
 #include <ESPAsyncWebServer.h>
 
 #include "YoYoWiFiManager/YoYoNetworkSettingsInterface.h"
@@ -33,22 +37,26 @@
       #define LED_BUILTIN  2
     #endif
     #define LED_BUILTIN_ON LOW
+    //#define SD_CS    15
 #elif defined(ESP32)
     #ifndef LED_BUILTIN 
       #define LED_BUILTIN  2
     #endif
     #define LED_BUILTIN_ON HIGH
-#endif
+    //#define SD_CS    5
+#endif    
 
 #define SSID_MAX_LENGTH 32
 #define PASSWORD_MAX_LENGTH 64
-#define MIN_WIFICLIENTTIMEOUT 30000
+#define MIN_WIFICLIENTTIMEOUT 10000
 #define MIN_WIFISERVERTIMEOUT 60000
 #define SCAN_NETWORKS_MIN_INT 30000
 #define MIN_CLIENTLISTUPDATEINTERVAL 3000
 #define MIN_MULTIUPDATEINTERVAL 500
+#define TICKINTERVAL_MS 10
 
 typedef enum {
+  YY_STOPPED          = WL_NO_SHIELD,
   //compatibility with wl_status_t (wl_definitions.h)
   YY_NO_SHIELD        = WL_NO_SHIELD,
   YY_IDLE_STATUS      = WL_IDLE_STATUS,
@@ -63,32 +71,45 @@ typedef enum {
   YY_CONNECTED_PEER_SERVER
 } yy_status_t;
 
+typedef enum {
+  YY_SPIFFS_STORAGE,
+  YY_SD_STORAGE,
+  YY_NO_STORAGE
+} yy_storage_t;
+
 class YoYoWiFiManager : public AsyncWebHandler {
+  using File = fs::File;
   public:
-  typedef enum {
-    YY_MODE_NONE,
-    YY_MODE_CLIENT,
-    YY_MODE_PEER_CLIENT,
-    YY_MODE_PEER_SERVER
-  } yy_mode_t;
-  yy_mode_t currentMode = YY_MODE_NONE;
-  yy_mode_t nextMode = YY_MODE_NONE;
+    typedef enum {
+      YY_MODE_NONE,
+      YY_MODE_CLIENT,
+      YY_MODE_PEER_CLIENT,
+      YY_MODE_PEER_SERVER
+    } yy_mode_t;
+    yy_mode_t currentMode = YY_MODE_NONE;
+    yy_mode_t nextMode = YY_MODE_NONE;
 
   private:
     bool running = false;
+    unsigned long tickDueAtMs = 0;
+    int promisedBytes = 0;
+
+    fs::FS *fs = NULL;
     StaticJsonDocument<8192> broadcastMessageList;   //TODO: this should be dynamic?
 
     #if defined(ESP8266)
       ESP8266WiFiMulti wifiMulti;
+      const int maxPromisedBytesPerTick = 5000;
     #elif defined(ESP32)
       WiFiMulti wifiMulti;
+      const int maxPromisedBytesPerTick = 5120; //dependant on module, the work it is doing and the speed of the SD card
     #endif
 
     char peerNetworkSSID[SSID_MAX_LENGTH];
     char peerNetworkPassword[PASSWORD_MAX_LENGTH];
     bool peerNetworkSet();
     
-    yy_status_t currentStatus = YY_IDLE_STATUS;
+    yy_status_t currentStatus = YY_STOPPED;
     uint32_t lastUpdatedMultiAtMs = 0;
 
     const byte DNS_PORT = 53;
@@ -97,8 +118,7 @@ class YoYoWiFiManager : public AsyncWebHandler {
 
     int webServerPort = 80;
     AsyncWebServer *webserver = NULL;
-    bool startWebServerOnceConnected = false;
-    int activeRequests = 0;
+    bool stopWebServerOnceConnected = true;
 
     uint32_t clientTimeOutAtMs = 0;
     void updateClientTimeOut();
@@ -119,7 +139,7 @@ class YoYoWiFiManager : public AsyncWebHandler {
     uint8_t wifiLEDPin;
     bool wifiLEDOn;
 
-    bool SPIFFS_ENABLED = false;
+    yy_storage_t storageType = YY_NO_STORAGE;
 
     typedef void (*voidCallbackPtr)();
     voidCallbackPtr onYY_CONNECTEDhandler = NULL;
@@ -133,7 +153,8 @@ class YoYoWiFiManager : public AsyncWebHandler {
     void startWebServer();
     void stopWebServer();
 
-    void addPeerNetwork(char *ssid, char *password);
+    void tick();
+
     void addKnownNetworks();
     bool addNetwork(char const *ssid, char const *password, bool autosave = true);
 
@@ -174,13 +195,14 @@ class YoYoWiFiManager : public AsyncWebHandler {
   public:
     YoYoWiFiManager();
 
-    void init(YoYoNetworkSettingsInterface *settings = NULL, voidCallbackPtr onYY_CONNECTEDhandler = NULL, jsonCallbackPtr getHandler = NULL, jsonCallbackPtr postHandler = NULL, bool startWebServerOnceConnected = false, int webServerPort = 80, int wifiLEDPin = LED_BUILTIN, bool wifiLEDOn = LED_BUILTIN_ON);
-    boolean begin(char const *apName, char const *apPassword = NULL, bool autoconnect = true);
+    void init(YoYoNetworkSettingsInterface *settings = NULL, voidCallbackPtr onYY_CONNECTEDhandler = NULL, jsonCallbackPtr getHandler = NULL, jsonCallbackPtr postHandler = NULL, bool stopWebServerOnceConnected = true, int webServerPort = 80, int wifiLEDPin = LED_BUILTIN, bool wifiLEDOn = LED_BUILTIN_ON, yy_storage_t storageType = YY_SPIFFS_STORAGE, uint8_t csPin = -1);
+    boolean begin(char const *apName, char const *apPassword = NULL, bool autoconnect = true, bool peerconnect = true);
     void end();
     void connect();
     void connect(char const *ssid, char const *password);
 
     uint8_t loop();
+    bool isRunning();
     yy_status_t getStatus();
     uint32_t getChipId();
 
@@ -189,10 +211,11 @@ class YoYoWiFiManager : public AsyncWebHandler {
     //AsyncWebHandler:
     bool canHandle(AsyncWebServerRequest *request);
     void handleRequest(AsyncWebServerRequest *request);
-    void handleCaptivePortalRequest(AsyncWebServerRequest *request);
+    int handleCaptivePortalRequest(AsyncWebServerRequest *request);
     void handleBody(AsyncWebServerRequest * request, uint8_t *data, size_t len, size_t index, size_t total);
 
     bool setCredentials(JsonVariant json);
+    void addPeerNetwork(char *ssid, char *password);
 
     bool hasPeers();
     int countPeers();
@@ -216,18 +239,21 @@ class YoYoWiFiManager : public AsyncWebHandler {
     int getOUI(uint8_t *mac);
     int getOUI(uint8_t a, uint8_t b, uint8_t c, uint8_t d = 0, uint8_t e = 0, uint8_t f = 0);
 
-    void sendFile(AsyncWebServerRequest * request, String path);
-    void sendIndexFile(AsyncWebServerRequest * request);
+    int fileExists(String path, String defaultIndexFile = "index.html");
+    int fileSize(String path, String defaultIndexFile = "index.html");
+    int sendFile(AsyncWebServerRequest * request, String path, String defaultIndexFile = "index.html");
+    int noAnswer(AsyncWebServerRequest * request);
+    int sendIndexFile(AsyncWebServerRequest * request);
     String getMimeType(String filename);
 
-    void onYoYoRequestGET(AsyncWebServerRequest *request);
-    void onYoYoRequestPOST(uint8_t *data, size_t len, AsyncWebServerRequest *request);
-    void onYoYoRequestUPLOAD(uint8_t *data, size_t len, AsyncWebServerRequest *request);
-    void onYoYoRequestDELETE(uint8_t *data, size_t len, AsyncWebServerRequest *request);
+    int onYoYoRequestGET(AsyncWebServerRequest *request);
+    int onYoYoRequestPOST(uint8_t *data, size_t len, AsyncWebServerRequest *request);
+    int onYoYoRequestUPLOAD(uint8_t *data, size_t len, AsyncWebServerRequest *request);
+    int onYoYoRequestDELETE(uint8_t *data, size_t len, AsyncWebServerRequest *request);
     
-    void onYoYoMessageGET(AsyncWebServerRequest *request);
-    void onYoYoMessagePOST(JsonVariant message, AsyncWebServerRequest *request);
-    void onYoYoMessageDELETE(JsonVariant message, AsyncWebServerRequest *request);
+    int onYoYoMessageGET(AsyncWebServerRequest *request);
+    int onYoYoMessagePOST(JsonVariant message, AsyncWebServerRequest *request);
+    int onYoYoMessageDELETE(JsonVariant message, AsyncWebServerRequest *request);
 
     void addBroadcastMessage(JsonVariant message);
     void processBroadcastMessageList();
