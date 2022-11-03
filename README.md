@@ -153,11 +153,10 @@ YY_CONNECTED is functionally equivalent to and numerically equal to [WL_CONNECTE
 
 ## Development
 * Fix the TODOs in the existing codebase
+* Extend SD card support to ESP8266
 * The default HTML page should generate a page that allows basic wifi config
 * Network discovery - zero conf (bonjour) support - use of iBeacon on the ESP32?
 * HTTP File upload to SPIFFS
-* SD card support as an alternative to SPIFFS
-* Use of websockets to stream sensor values
 * Support for peer-to-peer serverless connections across the Internet
 
 ## Limitations
