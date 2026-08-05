@@ -7,7 +7,7 @@ Beyond WiFi credential management, the Yo-Yo WiFi Manager Library provides a mea
 
 The library is being developed by David Chatting ([@davidchatting](https://github.com/davidchatting)), Mike Vanis ([@mikevanis](https://github.com/mikevanis)) and Andy Sheen ([@andysheen](https://github.com/andysheen)) for the [Yo–Yo Machines](https://www.yoyomachines.io/) project at the [Interaction Research Studio](https://github.com/interactionresearchstudio) - Goldsmiths, University of London. Collaboration welcome - please contribute by raising issues and making pull requests via GitHub.
 
-[![Demo video](https://img.youtube.com/vi/mcnmPNE4ELA/0.jpg)](https://youtu.be/mcnmPNE4ELA)
+<iframe width="560" height="315" src="https://www.youtube.com/embed/mcnmPNE4ELA" title="Yo-Yo WiFi Manager P5js example demo" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
 
 ## Installation
 
@@ -140,7 +140,7 @@ Extends the Basic example with a bespoke `/yoyo/settings` endpoint, showing how 
 
 ### P5js
 
-Demonstrates hosting a [p5.js](https://p5js.org/) sketch from the device's own captive portal and driving a physical LED from it via a custom `/yoyo/active` endpoint - POSTing `{"active": true}`/`{"active": false}` toggles a GPIO pin directly from the web page. See the demo video above.
+Demonstrates hosting a [p5.js](https://p5js.org/) sketch from the device's own captive portal and driving a physical LED from it via a custom `/yoyo/active` endpoint - POSTing `{"active": true}`/`{"active": false}` toggles a GPIO pin directly from the web page. See the [demo video](https://youtu.be/mcnmPNE4ELA).
 
 ### PeerNetwork
 
@@ -164,6 +164,50 @@ The following endpoints are built-in:
 | GET | `/yoyo/networks` | Currently visible WiFi networks (SSID, BSSID, RSSI) from the last scan |
 | GET | `/yoyo/clients` | IP/MAC of clients currently connected to this device's AP (peer server mode) |
 | GET | `/yoyo/peers` | The other Yo-Yo devices sharing this peer network (IP/MAC), flagging which is this device and which is the peer network's gateway |
+
+### GET /yoyo/credentials
+Returns every saved network as a JSON array. `password` is starred out to the same length as the real password rather than omitted, so the field is always present; `lastnetwork` is only present (and `true`) on the network most recently connected to:
+```json
+[
+  {"ssid": "HomeNetwork", "password": "***********", "lastnetwork": true},
+  {"ssid": "OfficeWiFi", "password": "*********"}
+]
+```
+An empty array (`[]`) if no networks are saved yet.
+
+### POST /yoyo/credentials
+Request body:
+```json
+{"ssid": "HomeNetwork", "password": "supersecret"}
+```
+On success (200), responds with the same shape as `GET /yoyo/credentials` above (the updated, still-starred list) and starts connecting to the new network. On failure (400 - e.g. `ssid`/`password` missing or too long), no body.
+
+### GET /yoyo/networks
+The most recent WiFi scan results:
+```json
+[
+  {"SSID": "HomeNetwork", "BSSID": "AA:BB:CC:DD:EE:FF", "RSSI": -42},
+  {"SSID": "OfficeWiFi", "BSSID": "11:22:33:44:55:66", "RSSI": -67}
+]
+```
+`RSSI` is signal strength in dBm (closer to 0 is stronger).
+
+### GET /yoyo/clients
+Clients currently connected to this device's own access point - only populated while in peer-server mode, `[]` otherwise:
+```json
+[
+  {"IP": "192.168.4.2", "MAC": "AA:BB:CC:DD:EE:FF"}
+]
+```
+
+### GET /yoyo/peers
+The other Yo-Yo devices on the same peer network. `LOCALHOST` is only present (and `true`) on the entry for this device itself; `GATEWAY` is only present (and `true`) on the peer-server device other peers connect through:
+```json
+[
+  {"IP": "192.168.4.1", "MAC": "AA:BB:CC:DD:EE:FF", "LOCALHOST": true, "GATEWAY": true},
+  {"IP": "192.168.4.2", "MAC": "11:22:33:44:55:66"}
+]
+```
 
 ## Status
 YY_CONNECTED is functionally equivalent to and numerically equal to [WL_CONNECTED](https://www.arduino.cc/en/Reference/WiFiStatus).
