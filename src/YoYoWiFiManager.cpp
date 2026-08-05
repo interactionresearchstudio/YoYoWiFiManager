@@ -143,8 +143,8 @@ void YoYoWiFiManager::stopWebServer() {
 
 void YoYoWiFiManager::addPeerNetwork(char *ssid, char *password) {
   if(ssid) {
-    strcpy(peerNetworkSSID, ssid);
-    if(password != NULL) strcpy(peerNetworkPassword, password);
+    yoyoSafeCopy(peerNetworkSSID, ssid, SSID_MAX_LENGTH);
+    if(password != NULL) yoyoSafeCopy(peerNetworkPassword, password, PASSWORD_MAX_LENGTH);
 
     addNetwork(peerNetworkSSID, peerNetworkPassword, false);
   }
@@ -205,7 +205,7 @@ bool YoYoWiFiManager::findNetwork(char const *ssid, char *matchingSSID, bool aut
 
     if(match) {
       result = true;
-      strcpy(matchingSSID, WiFi.SSID(n).c_str());
+      yoyoSafeCopy(matchingSSID, WiFi.SSID(n).c_str(), SSID_MAX_LENGTH);
     }
   }
 
@@ -1164,19 +1164,20 @@ bool YoYoWiFiManager::setCredentials(JsonVariant json) {
     char *ssid = new char[SSID_MAX_LENGTH];
     char *password = new char[PASSWORD_MAX_LENGTH];
 
-    strcpy(ssid, json["ssid"]);
-    strcpy(password, json["password"]);
+    //json["ssid"]/json["password"] are untrusted (received over the network) - copy bounded and reject if either is missing or too long:
+    bool ssidOk = yoyoSafeCopy(ssid, json["ssid"], SSID_MAX_LENGTH);
+    bool passwordOk = yoyoSafeCopy(password, json["password"], PASSWORD_MAX_LENGTH);
 
-    if(ssid && password) {
+    if(ssidOk && passwordOk) {
       Serial.printf("setCredentials %s  %s\n", ssid, password);
       success = addNetwork(ssid, password, true);
     }
     else {
-      Serial.println("can't extract ssid and network from json");
+      Serial.println("can't extract ssid and network from json (missing or too long)");
     }
 
-    delete password;
-    delete ssid;
+    delete[] password;
+    delete[] ssid;
   }
 
   return(success);

@@ -119,6 +119,7 @@ class YoYoSettings : public DynamicJsonDocument, public YoYoNetworkSettingsInter
             return(index);
         }
 
+        //NB relies on SSID_MAX_LENGTH/yoyoSafeCopy() from YoYoWiFiManager.h, which callers already must include before this file (see SSID_MAX_LENGTH use in isFull() below)
         bool getSSID(int index, char *ssid) {
             bool success = false;
 
@@ -126,8 +127,7 @@ class YoYoSettings : public DynamicJsonDocument, public YoYoNetworkSettingsInter
                 ssid[0] = '\0';
                 const char *v = (*this)["credentials"][index]["ssid"];
                 if(v) {
-                    strcpy(ssid, v);
-                    success = true;
+                    success = yoyoSafeCopy(ssid, v, SSID_MAX_LENGTH);
                 }
             }
 
@@ -141,8 +141,7 @@ class YoYoSettings : public DynamicJsonDocument, public YoYoNetworkSettingsInter
                 password[0] = '\0';
                 const char *v = (*this)["credentials"][index]["password"];
                 if(v) {
-                    strcpy(password, v);
-                    success = true;
+                    success = yoyoSafeCopy(password, v, PASSWORD_MAX_LENGTH);
                 }
             }
 

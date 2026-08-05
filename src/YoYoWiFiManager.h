@@ -48,6 +48,23 @@
 
 #define SSID_MAX_LENGTH 32
 #define PASSWORD_MAX_LENGTH 64
+
+//Copies at most destSize-1 bytes from src into dest, always NUL-terminating dest.
+//Returns false (dest is truncated, or left empty if src is NULL) if src doesn't fit.
+inline bool yoyoSafeCopy(char *dest, const char *src, size_t destSize) {
+  if(dest == NULL || destSize == 0) return false;
+  if(src == NULL) { dest[0] = '\0'; return false; }
+
+  size_t srcLen = strlen(src);
+  bool fits = srcLen < destSize;
+  size_t copyLen = fits ? srcLen : destSize - 1;
+
+  memcpy(dest, src, copyLen);
+  dest[copyLen] = '\0';
+
+  return fits;
+}
+
 #define MIN_WIFICLIENTTIMEOUT 10000
 #define MIN_WIFISERVERTIMEOUT 60000
 #define SCAN_NETWORKS_MIN_INT 30000
