@@ -165,7 +165,8 @@ void YoYoWiFiManager::addKnownNetworks() {
       settings -> getPassword(n, password);
       addNetwork(ssid, password, false);
     }
-    delete ssid, password;
+    delete[] ssid;
+    delete[] password;
   }
 }
 
@@ -192,7 +193,7 @@ bool YoYoWiFiManager::addNetwork(char const *ssid, char const *password, bool sa
       else {
         Serial.println("can't wifiMulti.addAP()");
       }
-      delete matchingSSID;
+      delete[] matchingSSID;
     }
   }
 
@@ -263,7 +264,8 @@ uint8_t YoYoWiFiManager::loop() {
       getStatusAsString(currentStatus, currentStatusString);
       getStatusAsString(yyStatus, yyStatusString);
       Serial.printf("STATUS:  %s\t>\t%s\n", currentStatusString, yyStatusString);
-      delete currentStatusString, yyStatusString;
+      delete[] currentStatusString;
+      delete[] yyStatusString;
 
       switch(yyStatus) {
         case YY_CONNECTED:
@@ -387,7 +389,8 @@ bool YoYoWiFiManager::updateMode() {
     getModeAsString(currentMode, currentModeString);
     getModeAsString(nextMode, nextModeString);
     Serial.printf("MODE:\t%s\t>\t%s\n", currentModeString, nextModeString);
-    delete currentModeString, nextModeString;
+    delete[] currentModeString;
+    delete[] nextModeString;
 
     switch(nextMode) {
       case YY_MODE_NONE:
@@ -855,7 +858,7 @@ int YoYoWiFiManager::onYoYoRequestPOST(uint8_t *data, size_t len, AsyncWebServer
     len = min(len, (unsigned int) 1024-1);
     int i = 0;
     for (; i < len; i++)  json[i] = char(data[i]);
-    json[i+1] = '\0';
+    json[i] = '\0';
 
     DynamicJsonDocument message(1024);
     DynamicJsonDocument payload(1024);
@@ -873,7 +876,7 @@ int YoYoWiFiManager::onYoYoRequestPOST(uint8_t *data, size_t len, AsyncWebServer
       result = 400;
     }
 
-    delete json;
+    delete[] json;
   }
   else if(request -> contentType().equals("multipart/form-data")) {
     //FILE UPLOAD
@@ -1159,7 +1162,8 @@ void YoYoWiFiManager::getCredentialsAsJson(JsonDocument& jsonDoc) {
       network["password"] = password;
       if(n == lastNetwork) network["lastnetwork"] = true;
     }
-    delete ssid, password;
+    delete[] ssid;
+    delete[] password;
   }
 }
 
@@ -1255,7 +1259,7 @@ void YoYoWiFiManager::getPeersAsJson(JsonDocument& jsonDoc) {
   if(localIPAddress) delete localIPAddress;
 
   delete ipAddress;
-  delete macAddress;
+  delete[] macAddress;
 }
 
 bool YoYoWiFiManager::getPeerN(int n, IPAddress *ipAddress, uint8_t *macAddress) {
@@ -1298,7 +1302,7 @@ void YoYoWiFiManager::createNestedPeer(JsonDocument& jsonDoc, IPAddress *ip, uin
       char *macAddressAsCStr = new char[18];
       mac_addr_to_c_str(macAddress, macAddressAsCStr);
       peer["MAC"] = macAddressAsCStr;
-      delete macAddressAsCStr;
+      delete[] macAddressAsCStr;
 
       if(localhost) peer["LOCALHOST"] = true;
       if(gateway)   peer["GATEWAY"] = true;
@@ -1369,8 +1373,8 @@ void YoYoWiFiManager::getClientsAsJson(JsonDocument& jsonDoc) {
       client["MAC"] = macAddress; 
     }
 
-    delete ipAddress;
-    delete macAddress;
+    delete[] ipAddress;
+    delete[] macAddress;
   }
   else if(currentMode == YY_MODE_PEER_CLIENT) {
     //Empty
