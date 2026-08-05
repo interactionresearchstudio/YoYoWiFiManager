@@ -7,6 +7,8 @@ Beyond WiFi credential management, the Yo-Yo WiFi Manager Library provides a mea
 
 The library is being developed by David Chatting ([@davidchatting](https://github.com/davidchatting)), Mike Vanis ([@mikevanis](https://github.com/mikevanis)) and Andy Sheen ([@andysheen](https://github.com/andysheen)) for the [Yo–Yo Machines](https://www.yoyomachines.io/) project at the [Interaction Research Studio](https://github.com/interactionresearchstudio) - Goldsmiths, University of London. Collaboration welcome - please contribute by raising issues and making pull requests via GitHub.
 
+[![Demo video](https://img.youtube.com/vi/mcnmPNE4ELA/0.jpg)](https://youtu.be/mcnmPNE4ELA)
+
 ## Installation
 
 ~~The latest stable release of the library is available in the Arduino IDE Library Manager - search for "YoYoWiFiManager". Click install.~~
@@ -133,20 +135,35 @@ This example uses the built-in [endpoints](#endpoints) */yoyo/credentials* and *
 Once started, by default the built-in LED will flash every second until a network is found or if none is available (with a minimum timeout of 30 seconds) the LED will light constantly and create a captive portal page. Once the network is configured and connected the LED will blink quickly three times and then stay off. If the connected network becomes unavailable, after a minimum timeout of 30 seconds the captive portal network will be restarted to allow reconfiguration. If no clients connect to the captive portal after at least 60 seconds another attempt is made to connect to any known networks. And so on.
 
 ### BasicWithEndpoints
+
+Extends the Basic example with a bespoke `/yoyo/settings` endpoint, showing how to register custom GET/POST handlers (via the `onYoYoMessageGET`/`onYoYoMessagePOST` callbacks passed to `wifiManager.init()`) alongside the built-in `/yoyo/credentials` handling. `GET /yoyo/settings` returns the whole `YoYoSettings` document as JSON; `POST /yoyo/settings` accepts the same `{ssid, password}` payload shape as `/yoyo/credentials`, but routes it through `wifiManager.setCredentials()` directly, so it's a starting point for saving additional custom values into the same settings document alongside the network credentials.
+
 ### P5js
+
+Demonstrates hosting a [p5.js](https://p5js.org/) sketch from the device's own captive portal and driving a physical LED from it via a custom `/yoyo/active` endpoint - POSTing `{"active": true}`/`{"active": false}` toggles a GPIO pin directly from the web page. See the demo video above.
+
 ### PeerNetwork
+
+The minimal example for observing peer network formation - it doesn't use `YoYoSettings` at all, so nothing is persisted between reboots, and it uses only the library's built-in endpoints. Its `data/script.js` polls `/yoyo/peers` every 15 seconds and renders a clickable list of the other devices sharing the same peer network, which is a quick way to confirm that multiple boards have found and are talking to each other.
+
 ### Vue
+
+A [Vue.js](https://vuejs.org/) colour-picker interface with a custom `/yoyo/colour` GET+POST endpoint pair that reads and sets an RGB LED on the device; POSTing a new colour is also broadcast to any peers on the network. Also wires up a physical push-button via the [AceButton](https://github.com/bxparks/AceButton) library as a starting point for adding your own device-side interaction.
+
+### WebSocketsServer
+
+Shows the library's webserver running alongside a second, independent [WebSocketsServer](https://github.com/Links2004/arduinoWebSockets) instance on port 81, for cases where you want real-time bidirectional messaging rather than the request/response style of the built-in REST endpoints. The client-side `data/script.js` opens a plain WebSocket connection to the device once the captive portal has connected.
 
 ## Endpoints
 The following endpoints are built-in:
 
-/yoyo/credentials GET + POST
-
-/yoyo/networks GET
-
-/yoyo/clients GET
-
-/yoyo/peers GET
+| Method | Path | Description |
+| --- | --- | --- |
+| GET | `/yoyo/credentials` | Saved network credentials as JSON, with passwords starred out |
+| POST | `/yoyo/credentials` | Accepts `{"ssid": ..., "password": ...}`, saves it and attempts to connect |
+| GET | `/yoyo/networks` | Currently visible WiFi networks (SSID, BSSID, RSSI) from the last scan |
+| GET | `/yoyo/clients` | IP/MAC of clients currently connected to this device's AP (peer server mode) |
+| GET | `/yoyo/peers` | The other Yo-Yo devices sharing this peer network (IP/MAC), flagging which is this device and which is the peer network's gateway |
 
 ## Status
 YY_CONNECTED is functionally equivalent to and numerically equal to [WL_CONNECTED](https://www.arduino.cc/en/Reference/WiFiStatus).
