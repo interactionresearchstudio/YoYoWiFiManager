@@ -157,14 +157,6 @@ Shows the library's webserver running alongside a second, independent [WebSocket
 ## Endpoints
 The following endpoints are built-in:
 
-| Method | Path | Description |
-| --- | --- | --- |
-| GET | `/yoyo/credentials` | Saved network credentials as JSON, with passwords starred out |
-| POST | `/yoyo/credentials` | Accepts `{"ssid": ..., "password": ...}`, saves it and attempts to connect |
-| GET | `/yoyo/networks` | Currently visible WiFi networks (SSID, BSSID, RSSI) from the last scan |
-| GET | `/yoyo/clients` | IP/MAC of clients currently connected to this device's AP (peer server mode) |
-| GET | `/yoyo/peers` | The other Yo-Yo devices sharing this peer network (IP/MAC), flagging which is this device and which is the peer network's gateway |
-
 ### GET /yoyo/credentials
 Returns every saved network as a JSON array. `password` is starred out to the same length as the real password rather than omitted, so the field is always present; `lastnetwork` is only present (and `true`) on the network most recently connected to:
 ```json
