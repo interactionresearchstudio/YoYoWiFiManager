@@ -7,7 +7,7 @@ Beyond WiFi credential management, the Yo-Yo WiFi Manager Library provides a mea
 
 The library is being developed by David Chatting ([@davidchatting](https://github.com/davidchatting)), Mike Vanis ([@mikevanis](https://github.com/mikevanis)) and Andy Sheen ([@andysheen](https://github.com/andysheen)) for the [Yo–Yo Machines](https://www.yoyomachines.io/) project at the [Interaction Research Studio](https://github.com/interactionresearchstudio) - Goldsmiths, University of London. Collaboration welcome - please contribute by raising issues and making pull requests via GitHub.
 
-<iframe width="560" height="315" src="https://www.youtube.com/embed/mcnmPNE4ELA" title="Yo-Yo WiFi Manager P5js example demo" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
+[![Demo video](https://img.youtube.com/vi/mcnmPNE4ELA/0.jpg)](https://youtu.be/mcnmPNE4ELA)
 
 ## Installation
 
@@ -156,14 +156,6 @@ Shows the library's webserver running alongside a second, independent [WebSocket
 
 ## Endpoints
 The following endpoints are built-in:
-
-| Method | Path | Description |
-| --- | --- | --- |
-| GET | `/yoyo/credentials` | Saved network credentials as JSON, with passwords starred out |
-| POST | `/yoyo/credentials` | Accepts `{"ssid": ..., "password": ...}`, saves it and attempts to connect |
-| GET | `/yoyo/networks` | Currently visible WiFi networks (SSID, BSSID, RSSI) from the last scan |
-| GET | `/yoyo/clients` | IP/MAC of clients currently connected to this device's AP (peer server mode) |
-| GET | `/yoyo/peers` | The other Yo-Yo devices sharing this peer network (IP/MAC), flagging which is this device and which is the peer network's gateway |
 
 ### GET /yoyo/credentials
 Returns every saved network as a JSON array. `password` is starred out to the same length as the real password rather than omitted, so the field is always present; `lastnetwork` is only present (and `true`) on the network most recently connected to:
