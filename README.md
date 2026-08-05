@@ -7,6 +7,8 @@ Beyond WiFi credential management, the Yo-Yo WiFi Manager Library provides a mea
 
 The library is being developed by David Chatting ([@davidchatting](https://github.com/davidchatting)), Mike Vanis ([@mikevanis](https://github.com/mikevanis)) and Andy Sheen ([@andysheen](https://github.com/andysheen)) for the [Yo–Yo Machines](https://www.yoyomachines.io/) project at the [Interaction Research Studio](https://github.com/interactionresearchstudio) - Goldsmiths, University of London. Collaboration welcome - please contribute by raising issues and making pull requests via GitHub.
 
+Demo video: https://youtu.be/mcnmPNE4ELA
+
 ## Installation
 
 ~~The latest stable release of the library is available in the Arduino IDE Library Manager - search for "YoYoWiFiManager". Click install.~~
@@ -134,7 +136,6 @@ Once started, by default the built-in LED will flash every second until a networ
 
 ### BasicWithEndpoints
 ### P5js
-Demo video: https://youtu.be/mcnmPNE4ELA
 ### PeerNetwork
 ### Vue
 
