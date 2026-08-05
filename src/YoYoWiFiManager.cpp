@@ -143,8 +143,13 @@ void YoYoWiFiManager::stopWebServer() {
 
 void YoYoWiFiManager::addPeerNetwork(char *ssid, char *password) {
   if(ssid) {
-    yoyoSafeCopy(peerNetworkSSID, ssid, SSID_MAX_LENGTH);
-    if(password != NULL) yoyoSafeCopy(peerNetworkPassword, password, PASSWORD_MAX_LENGTH);
+    strncpy(peerNetworkSSID, ssid, SSID_MAX_LENGTH - 1);
+    peerNetworkSSID[SSID_MAX_LENGTH - 1] = '\0';
+
+    if(password != NULL) {
+      strncpy(peerNetworkPassword, password, PASSWORD_MAX_LENGTH - 1);
+      peerNetworkPassword[PASSWORD_MAX_LENGTH - 1] = '\0';
+    }
 
     addNetwork(peerNetworkSSID, peerNetworkPassword, false);
   }
@@ -205,7 +210,8 @@ bool YoYoWiFiManager::findNetwork(char const *ssid, char *matchingSSID, bool aut
 
     if(match) {
       result = true;
-      yoyoSafeCopy(matchingSSID, WiFi.SSID(n).c_str(), SSID_MAX_LENGTH);
+      strncpy(matchingSSID, WiFi.SSID(n).c_str(), SSID_MAX_LENGTH - 1);
+      matchingSSID[SSID_MAX_LENGTH - 1] = '\0';
     }
   }
 
@@ -1164,11 +1170,16 @@ bool YoYoWiFiManager::setCredentials(JsonVariant json) {
     char *ssid = new char[SSID_MAX_LENGTH];
     char *password = new char[PASSWORD_MAX_LENGTH];
 
-    //json["ssid"]/json["password"] are untrusted (received over the network) - copy bounded and reject if either is missing or too long:
-    bool ssidOk = yoyoSafeCopy(ssid, json["ssid"], SSID_MAX_LENGTH);
-    bool passwordOk = yoyoSafeCopy(password, json["password"], PASSWORD_MAX_LENGTH);
+    //json["ssid"]/json["password"] are untrusted (received over the network) - check they fit before copying, rather than overflowing ssid/password:
+    const char *ssidValue = json["ssid"] | "";
+    const char *passwordValue = json["password"] | "";
+    bool ssidOk = strlen(ssidValue) < SSID_MAX_LENGTH;
+    bool passwordOk = strlen(passwordValue) < PASSWORD_MAX_LENGTH;
 
     if(ssidOk && passwordOk) {
+      strcpy(ssid, ssidValue);
+      strcpy(password, passwordValue);
+
       Serial.printf("setCredentials %s  %s\n", ssid, password);
       success = addNetwork(ssid, password, true);
     }
