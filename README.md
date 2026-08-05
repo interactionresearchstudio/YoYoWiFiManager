@@ -7,7 +7,7 @@ Beyond WiFi credential management, the Yo-Yo WiFi Manager Library provides a mea
 
 The library is being developed by David Chatting ([@davidchatting](https://github.com/davidchatting)), Mike Vanis ([@mikevanis](https://github.com/mikevanis)) and Andy Sheen ([@andysheen](https://github.com/andysheen)) for the [Yo–Yo Machines](https://www.yoyomachines.io/) project at the [Interaction Research Studio](https://github.com/interactionresearchstudio) - Goldsmiths, University of London. Collaboration welcome - please contribute by raising issues and making pull requests via GitHub.
 
-<iframe width="560" height="315" src="https://www.youtube.com/embed/mcnmPNE4ELA" title="Yo-Yo WiFi Manager P5js example demo" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
+[![Demo video](https://img.youtube.com/vi/mcnmPNE4ELA/0.jpg)](https://youtu.be/mcnmPNE4ELA)
 
 ## Installation
 
