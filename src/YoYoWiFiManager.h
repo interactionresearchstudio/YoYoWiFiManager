@@ -17,6 +17,7 @@
   #include <HTTPUpdate.h>
   #include <WiFiMulti.h>
   #include <esp_wifi.h>
+  #include <esp_netif.h>        //esp_netif_get_sta_list()/esp_netif_sta_list_t - replaces the removed tcpip_adapter_get_sta_list()/tcpip_adapter_sta_list_t
   #include <AsyncTCP.h>
   #include <SPIFFS.h>
 #endif
@@ -179,8 +180,10 @@ class YoYoWiFiManager : public AsyncWebHandler {
 
     #if defined(ESP32)
       wifi_sta_list_t wifi_sta_list;
+      esp_netif_sta_list_t adapter_sta_list;
+    #elif defined(ESP8266)
+      tcpip_adapter_sta_list_t adapter_sta_list;
     #endif
-    tcpip_adapter_sta_list_t adapter_sta_list;
 
     int POST(const char *server, const char *path, const char *payload, char *contentType, char *response = NULL);
     int GET(const char *server, const char *path, char *response);

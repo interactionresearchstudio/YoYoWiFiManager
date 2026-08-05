@@ -1274,11 +1274,10 @@ bool YoYoWiFiManager::getPeerN(int n, IPAddress *ipAddress, uint8_t *macAddress)
       //TODO: implement
       break;
     case YY_MODE_PEER_SERVER:
-        tcpip_adapter_sta_info_t station;
         int clientCount = countClients();
         int peerCount = 0;
         for(int i = 0; i < clientCount && !success; ++i) {
-          station = adapter_sta_list.sta[i];
+          auto station = adapter_sta_list.sta[i];
           if(isEspressif(station.mac)) {
             success = (peerCount == n);
             if(success) {
@@ -1326,10 +1325,9 @@ int YoYoWiFiManager::countPeers() {
       if(currentStatus == YY_CONNECTED_PEER_CLIENT) count = 1;  //is connected to the server
       break;
     case YY_MODE_PEER_SERVER:
-      tcpip_adapter_sta_info_t station;
       int clientCount = countClients();
       for(int n = 0; n < clientCount; ++n) {
-        station = adapter_sta_list.sta[n];
+        auto station = adapter_sta_list.sta[n];
         if(isEspressif(station.mac)) count++;
       }
       break;
@@ -1361,7 +1359,6 @@ void YoYoWiFiManager::getClientsAsJson(JsonDocument& jsonDoc) {
   if(currentMode == YY_MODE_PEER_SERVER) {
     char *ipAddress = new char[17];
     char *macAddress = new char[18];
-    tcpip_adapter_sta_info_t station;
 
     int clientCount = updateClientList();
     for(int n = 0; n < clientCount; ++n) {
@@ -1410,7 +1407,7 @@ int YoYoWiFiManager::updateClientList() {
 
       #elif defined(ESP32)
         esp_wifi_ap_get_sta_list(&wifi_sta_list);
-        tcpip_adapter_get_sta_list(&wifi_sta_list, &adapter_sta_list);
+        esp_netif_get_sta_list(&wifi_sta_list, &adapter_sta_list);   //tcpip_adapter_get_sta_list() was removed from current ESP-IDF - this is its documented esp_netif replacement
         count = adapter_sta_list.num;
       #endif
     }
