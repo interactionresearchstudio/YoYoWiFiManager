@@ -1395,7 +1395,6 @@ int YoYoWiFiManager::updateClientList() {
         adapter_sta_list.num = count;
 
         int n=0;
-        tcpip_adapter_sta_info_t station;
         while (count > 0 && stat_info != NULL) {
           memcpy(adapter_sta_list.sta[n].mac, stat_info->bssid, sizeof(stat_info->bssid[0])*6);
           adapter_sta_list.sta[n].ip = stat_info->ip;
@@ -1406,8 +1405,24 @@ int YoYoWiFiManager::updateClientList() {
         wifi_softap_free_station_info();
 
       #elif defined(ESP32)
+        //tcpip_adapter_get_sta_list() was removed from current ESP-IDF - unlike the old single call,
+        //esp_wifi only gives MAC addresses (esp_wifi_ap_get_sta_list()); each station's IP has to be
+        //looked up separately from the AP's DHCP server lease table by MAC (esp_netif_dhcps_get_clients_by_mac()):
         esp_wifi_ap_get_sta_list(&wifi_sta_list);
-        esp_netif_get_sta_list(&wifi_sta_list, &adapter_sta_list);   //tcpip_adapter_get_sta_list() was removed from current ESP-IDF - this is its documented esp_netif replacement
+
+        esp_netif_pair_mac_ip_t mac_ip_pair[ESP_WIFI_MAX_CONN_NUM];
+        for (int n = 0; n < wifi_sta_list.num; n++) {
+          memcpy(mac_ip_pair[n].mac, wifi_sta_list.sta[n].mac, 6);
+        }
+
+        esp_netif_t *apNetif = esp_netif_get_handle_from_ifkey("WIFI_AP_DEF");
+        esp_netif_dhcps_get_clients_by_mac(apNetif, wifi_sta_list.num, mac_ip_pair);
+
+        adapter_sta_list.num = wifi_sta_list.num;
+        for (int n = 0; n < wifi_sta_list.num; n++) {
+          memcpy(adapter_sta_list.sta[n].mac, mac_ip_pair[n].mac, 6);
+          memcpy(&(adapter_sta_list.sta[n].ip), &(mac_ip_pair[n].ip), sizeof(adapter_sta_list.sta[n].ip));
+        }
         count = adapter_sta_list.num;
       #endif
     }
