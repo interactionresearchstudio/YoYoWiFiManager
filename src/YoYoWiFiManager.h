@@ -10,17 +10,17 @@
   #include <ESP8266WiFiMulti.h>
   #include <ESPAsyncTCP.h>      //not currently available via Library Manager > https://github.com/me-no-dev/ESPAsyncTCP
   #include <ESP8266HTTPClient.h>
-  #include "YoYoWiFiManager/wifi_sta.h"
 
 #elif defined(ESP32)
   #include <HTTPClient.h>
   #include <HTTPUpdate.h>
   #include <WiFiMulti.h>
   #include <esp_wifi.h>
-  #include <esp_netif.h>        //esp_netif_get_sta_list()/esp_netif_sta_list_t - replaces the removed tcpip_adapter_get_sta_list()/tcpip_adapter_sta_list_t
+  #include <esp_netif.h>        //esp_netif_get_handle_from_ifkey()/esp_netif_dhcps_get_clients_by_mac() - used to resolve each AP station's IP, replacing the removed tcpip_adapter_get_sta_list()
   #include <AsyncTCP.h>
   #include <SPIFFS.h>
 #endif
+#include "YoYoWiFiManager/wifi_sta.h"   //this library's own station-list type, used on both platforms - see #61
 //#include <SdFat.h>
 #include <SD.h> //https://www.arduino.cc/en/Reference/SD + https://github.com/arduino-libraries/SD
 #include <SPI.h>
@@ -180,10 +180,8 @@ class YoYoWiFiManager : public AsyncWebHandler {
 
     #if defined(ESP32)
       wifi_sta_list_t wifi_sta_list;
-      esp_netif_sta_list_t adapter_sta_list;
-    #elif defined(ESP8266)
-      tcpip_adapter_sta_list_t adapter_sta_list;
     #endif
+    YoYoStaList adapter_sta_list;
 
     int POST(const char *server, const char *path, const char *payload, char *contentType, char *response = NULL);
     int GET(const char *server, const char *path, char *response);
